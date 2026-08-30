@@ -2,7 +2,6 @@ from sqlmodel import Field, SQLModel
 
 
 class Customer(SQLModel, table=True):
-
     customer_id: str = Field(
         primary_key=True,
         max_length=32,

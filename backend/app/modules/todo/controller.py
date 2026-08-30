@@ -4,7 +4,6 @@ from app.modules.todo.service import TodoService
 
 
 class TodoController(BaseController):
-
     def __init__(
         self,
         service: TodoService,
@@ -37,9 +36,7 @@ class TodoController(BaseController):
         todo_id: int,
     ):
 
-        todo = self.service.get_by_id(
-            todo_id
-        )
+        todo = self.service.get_by_id(todo_id)
 
         return self.success(
             data=todo,

@@ -1,9 +1,7 @@
-
 from sqlmodel import Field, SQLModel
 
 
 class Product(SQLModel, table=True):
-
     product_id: str = Field(
         primary_key=True,
         max_length=32,

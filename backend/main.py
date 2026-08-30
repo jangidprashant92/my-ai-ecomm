@@ -1,13 +1,14 @@
 from typing import cast
 
+from fastapi import FastAPI
+from starlette.types import ExceptionHandler
+
 from app.common.exception_handlers import (
     app_exception_handler,
     generic_exception_handler,
 )
 from app.core.exceptions import AppException
 from app.modules.todo.routes import router as todo_router
-from fastapi import FastAPI
-from starlette.types import ExceptionHandler
 
 app = FastAPI(title="AI Commerce Platform")
 

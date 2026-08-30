@@ -1,6 +1,7 @@
 from .category_translation import (
     ProductCategoryNameTranslation,
 )
+from .conversation import Conversation, Message
 from .customer import Customer
 from .geolocation import Geolocation
 from .order import Order
@@ -12,8 +13,10 @@ from .seller import Seller
 from .todo import Todo
 
 __all__ = [
+    "Conversation",
     "Customer",
     "Geolocation",
+    "Message",
     "Order",
     "OrderItem",
     "OrderPayment",

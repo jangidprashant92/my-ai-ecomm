@@ -1,9 +1,20 @@
 {
-  "python.analysis.extraPaths": [
-    "./backend"
-  ],
-  "pylint.args": [
-    "--init-hook",
-    "import sys; sys.path.insert(0, './backend')"
-  ]
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+  "pylint.args": ["--init-hook", "import sys; sys.path.insert(0, './backend')"],
+  "python.analysis.autoImportCompletions": true,
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": false
+  },
+  "editor.suggestOnTriggerCharacters": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
 }

@@ -1,6 +1,5 @@
-
 import pandas as pd
-from app.database.session import engine
+from app.core.database import engine
 from sqlalchemy import insert
 from sqlmodel import SQLModel
 
@@ -20,16 +19,13 @@ def ingest_csv(
         ),
         start=1,
     ):
-
         # --------------------------------
         # Convert datetime columns
         # --------------------------------
 
         if date_columns:
             for column in date_columns:
-
                 if column in chunk.columns:
-
                     chunk[column] = pd.to_datetime(
                         chunk[column],
                         errors="coerce",
@@ -46,24 +42,18 @@ def ingest_csv(
             None,
         )
 
-        records = chunk.to_dict(
-            orient="records"
-        )
+        records = chunk.to_dict(orient="records")
 
         # --------------------------------
         # Bulk insert
         # --------------------------------
 
         with engine.begin() as connection:
-
             connection.execute(
                 insert(model),
                 records,
             )
 
-        print(
-            f"Chunk {chunk_number}: "
-            f"{len(records)} rows inserted"
-        )
+        print(f"Chunk {chunk_number}: {len(records)} rows inserted")
 
     print(f"Finished: {csv_path}")

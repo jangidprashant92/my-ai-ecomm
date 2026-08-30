@@ -1,5 +1,6 @@
-from app.models.todo import Todo
 from sqlmodel import Session, select
+
+from app.models.todo import Todo
 
 
 class TodoRepository:

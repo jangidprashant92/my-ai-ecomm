@@ -4,7 +4,6 @@ from sqlmodel import Field, SQLModel
 
 
 class OrderPayment(SQLModel, table=True):
-
     order_id: str = Field(
         foreign_key="order.order_id",
         primary_key=True,

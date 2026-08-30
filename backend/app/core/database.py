@@ -9,6 +9,7 @@ engine = create_engine(
     echo=True,
 )
 
+
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session

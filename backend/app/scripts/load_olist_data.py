@@ -17,7 +17,7 @@ DATA_DIR = PROJECT_ROOT / "datasets" / "raw"
 
 
 def load_olist_data():
- 
+
     # ==================================
     # 1. CATEGORY TRANSLATION
     # ==================================

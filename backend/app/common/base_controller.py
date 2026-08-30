@@ -8,7 +8,6 @@ class BaseController:
     Base controller shared by all API controllers.
     """
 
-
     def success(
         self,
         data: Any = None,

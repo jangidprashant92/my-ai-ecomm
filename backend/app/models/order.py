@@ -4,7 +4,6 @@ from sqlmodel import Field, SQLModel
 
 
 class Order(SQLModel, table=True):
-
     order_id: str = Field(
         primary_key=True,
         max_length=32,

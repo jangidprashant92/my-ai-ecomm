@@ -1,3 +1,5 @@
+from fastapi import APIRouter
+
 from app.modules.todo.dependencies import (
     TodoControllerDep,
 )
@@ -5,7 +7,6 @@ from app.modules.todo.schemas import (
     TodoCreate,
     TodoUpdate,
 )
-from fastapi import APIRouter
 
 router = APIRouter(
     prefix="/todos",
