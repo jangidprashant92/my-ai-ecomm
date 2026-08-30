@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: ecommerce_postgres
+
+    env_file:
+      - .env
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      # Persistent PostgreSQL database
+      - postgres_data:/var/lib/postgresql/data
+
+      # Database schema initialization
+      - ./db/init:/docker-entrypoint-initdb.d
+
+      # CSV files accessible inside container
+      - ./datasets/raw:/data/raw:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
