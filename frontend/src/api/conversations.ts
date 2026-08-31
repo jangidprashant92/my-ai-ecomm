@@ -9,9 +9,7 @@ export interface Conversation {
 }
 
 
-export async function getConversations(): Promise<
-  Conversation[]
-> {
+export async function getConversations(): Promise<{ data: Conversation[] }> {
   const response = await fetch(
     `${API_URL}/conversations`,
   );

@@ -6,6 +6,7 @@ from app.common.exception_handlers import (
 )
 from app.core.exceptions import AppException
 from app.modules.conversations.routes import router as conversations_router
+from app.modules.messages.routes import router as messages_router
 from app.modules.todo.routes import router as todo_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import (
@@ -37,6 +38,7 @@ app.add_exception_handler(
 
 app.include_router(todo_router)  # Include the todo router
 app.include_router(conversations_router)  # Include the conversations router
+app.include_router(messages_router)  # Include the messages router
 
 
 @app.get("/")

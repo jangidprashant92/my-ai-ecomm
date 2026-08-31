@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
     MISTRAL_API_KEY: str
+    MISTRAL_MODEL: str
+    LLM_PROVIDER: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

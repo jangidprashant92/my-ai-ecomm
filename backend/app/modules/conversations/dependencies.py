@@ -1,12 +1,12 @@
 from typing import Annotated
 
+from app.ai.llm.base import BaseLLMProvider
+from app.ai.llm.dependencies import get_llm_provider
 from app.dependencies.database import SessionDep
-from app.modules.conversations.controller import ConversationsController
 from app.modules.conversations.repository import (
     ConversationsRepository,
-    MessagesRepository,
 )
-from app.modules.conversations.services.conversation_service import ConversationsService
+from app.modules.conversations.services import ConversationsService
 from fastapi import Depends
 
 
@@ -25,47 +25,22 @@ ConversationsRepositoryDep = Annotated[
 ]
 
 
-def get_messages_repository(
-    session: SessionDep,
-) -> MessagesRepository:
-
-    return MessagesRepository(
-        session=session,
-    )
-
-
-MessagesRepositoryDep = Annotated[
-    MessagesRepository,
-    Depends(get_messages_repository),
+LLMProviderDep = Annotated[
+    BaseLLMProvider,
+    Depends(get_llm_provider),
 ]
 
 
 def get_conversation_service(
     repository: ConversationsRepositoryDep,
-    message_repository: MessagesRepositoryDep,
 ) -> ConversationsService:
 
     return ConversationsService(
-        repository=repository, message_repository=message_repository
+        repository=repository,
     )
 
 
 ConversationsServiceDep = Annotated[
     ConversationsService,
     Depends(get_conversation_service),
-]
-
-
-def get_conversation_controller(
-    service: ConversationsServiceDep,
-) -> ConversationsController:
-
-    return ConversationsController(
-        service=service,
-    )
-
-
-ConversationsControllerDep = Annotated[
-    ConversationsController,
-    Depends(get_conversation_controller),
 ]

@@ -1,60 +1,26 @@
 import uuid
 
 from app.models.conversation import Conversation
-from app.modules.conversations.schemas import ConversationCreate
-from app.utils.text import limit_to_words
-from sqlmodel import Session
+from app.shared.repository import BaseRepository
+from sqlmodel import Session, desc, select
 
 
-class ConversationsRepository:
+class ConversationsRepository(BaseRepository[Conversation]):
+    """Repository for managing conversations in the database."""
+
     def __init__(
         self,
         session: Session,
     ):
-        self.session = session
+        super().__init__(session, model=Conversation)
 
-    def create(self, conversation_data: ConversationCreate):
-        user_id = uuid.UUID(
-            "12345678-1234-4234-8234-123456789abc"
-        )  # Generate a new UUID for the user
-        conversation = Conversation(
-            title=limit_to_words(conversation_data.message, 5),
-            user_id=user_id,
-            last_message_id=None,
-            is_pinned=False,
+    def get_by_user_id(self, user_id: uuid.UUID, limit: int = 10, offset: int = 0):
+        """Get all conversations for a specific user."""
+        statement = (
+            select(Conversation)
+            .where(Conversation.user_id == user_id)
+            .order_by(desc(Conversation.updated_at))
+            .offset(offset)  # Skip the first N items
+            .limit(limit)  # Limit the total results returned
         )
-
-        # Implementation for saving a conversation
-        self.session.add(conversation)
-
-        self.session.commit()
-
-        self.session.refresh(conversation)
-
-        return conversation
-
-    def get_by_id(self, conversation_id: uuid.UUID):
-        # Implementation for retrieving a conversation by ID
-        return self.session.get(Conversation, conversation_id)
-
-
-class MessagesRepository:
-    def __init__(
-        self,
-        session: Session,
-    ):
-        self.session = session
-
-    def create(self, message_data):
-        # Implementation for saving a message
-        self.session.add(message_data)
-        self.session.commit()
-        self.session.refresh(message_data)
-        return message_data
-
-    def update(self, message_data):
-        # Implementation for updating a message
-        self.session.add(message_data)
-        self.session.commit()
-        self.session.refresh(message_data)
-        return message_data
+        return self.session.exec(statement).all()
