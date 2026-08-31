@@ -1,3 +1,5 @@
+import importlib
+import pkgutil
 from logging.config import fileConfig
 
 from alembic import context
@@ -13,8 +15,6 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-from app.models import *
 
 # for 'autogenerate' support
 # from myapp import mymodel
@@ -25,6 +25,24 @@ target_metadata = SQLModel.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+def import_models(package_name):
+    """Automatically import all models from a package and its subpackages."""
+    package = importlib.import_module(package_name)
+    for _, module_name, _ in pkgutil.walk_packages(
+        package.__path__, package.__name__ + "."
+    ):
+        try:
+            importlib.import_module(module_name)
+        except ImportError:
+            # Skip modules that can't be imported (e.g., due to missing dependencies)
+            pass
+
+
+# Import all models to ensure they're registered with SQLAlchemy
+import_models("app.modules")
+import_models("app.models")
 
 
 def run_migrations_offline() -> None:

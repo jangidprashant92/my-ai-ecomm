@@ -1,9 +1,8 @@
 from typing import Annotated
 
+from app.core.database import get_session
 from fastapi import Depends
 from sqlmodel import Session
-
-from app.core.database import get_session
 
 SessionDep = Annotated[
     Session,

@@ -1,6 +1,8 @@
+import uuid
+
 from sqlmodel import SQLModel
 
 
 class ConversationCreate(SQLModel):
-    title: str
-    description: str | None = None
+    conversation_id: uuid.UUID | None = None
+    message: str

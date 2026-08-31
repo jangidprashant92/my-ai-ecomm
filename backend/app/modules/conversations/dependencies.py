@@ -2,8 +2,11 @@ from typing import Annotated
 
 from app.dependencies.database import SessionDep
 from app.modules.conversations.controller import ConversationsController
-from app.modules.conversations.repository import ConversationsRepository
-from app.modules.conversations.service import ConversationsService
+from app.modules.conversations.repository import (
+    ConversationsRepository,
+    MessagesRepository,
+)
+from app.modules.conversations.services.conversation_service import ConversationsService
 from fastapi import Depends
 
 
@@ -22,12 +25,28 @@ ConversationsRepositoryDep = Annotated[
 ]
 
 
+def get_messages_repository(
+    session: SessionDep,
+) -> MessagesRepository:
+
+    return MessagesRepository(
+        session=session,
+    )
+
+
+MessagesRepositoryDep = Annotated[
+    MessagesRepository,
+    Depends(get_messages_repository),
+]
+
+
 def get_conversation_service(
     repository: ConversationsRepositoryDep,
+    message_repository: MessagesRepositoryDep,
 ) -> ConversationsService:
 
     return ConversationsService(
-        repository=repository,
+        repository=repository, message_repository=message_repository
     )
 
 

@@ -8,9 +8,9 @@ router = APIRouter(
 )
 
 
-@router.post("/")
-def create_conversation(
+@router.post("/create")
+async def create_conversation(
     conversation: ConversationCreate,
     controller: ConversationsControllerDep,
 ):
-    return controller.create_conversation(conversation)
+    return await controller.create_conversation(conversation)
