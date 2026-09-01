@@ -151,3 +151,8 @@ class MessagesService:
             self.message_repository.session.commit()
 
             raise
+
+    def get_messages_by_conversation(self, conversation_id: str):
+        """Get all messages for a specific conversation."""
+        messages = self.message_repository.get_messages_by_conversation(conversation_id)
+        return messages

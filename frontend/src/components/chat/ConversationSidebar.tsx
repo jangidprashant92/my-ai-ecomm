@@ -26,7 +26,7 @@ export function ConversationSidebar({
       try {
         const data = await getConversations();
 
-        setConversations(data.data);
+        setConversations(data.data.conversations);
       } catch (error) {
         console.error("Failed to load conversations:", error);
       } finally {

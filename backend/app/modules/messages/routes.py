@@ -1,3 +1,4 @@
+from app.common.base_controller import BaseController
 from app.modules.conversations.schemas import ConversationCreate
 from app.modules.messages.dependencies import MessagesServiceDep
 from fastapi import APIRouter
@@ -28,3 +29,19 @@ async def send_message(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/get-messages/{conversation_id}")
+async def get_messages(
+    conversation_id: str,
+    service: MessagesServiceDep,
+):
+    """Get all messages for a specific conversation."""
+    try:
+        messages = service.get_messages_by_conversation(conversation_id)
+
+        return BaseController().success(
+            data={"messages": messages},
+        )
+    except Exception as e:
+        raise e

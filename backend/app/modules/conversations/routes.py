@@ -18,6 +18,5 @@ async def get_conversations(service: ConversationsServiceDep):
     )  # Replace with actual user ID logic
 
     return BaseController().success(
-        data=conversations,
-        message="Conversations retrieved successfully.",
+        data={"conversations": conversations},
     )

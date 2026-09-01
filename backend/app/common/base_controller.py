@@ -11,7 +11,7 @@ class BaseController:
     def success(
         self,
         data: Any = None,
-        message: str = "Success",
+        message: str = "",
     ):
         return ApiResponse.success(
             data=data,
