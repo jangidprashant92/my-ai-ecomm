@@ -1,5 +1,12 @@
-"use client";
-
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import { useScrollLock } from "@assistant-ui/react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { ChevronDownIcon, LoaderIcon } from "lucide-react";
 import {
   memo,
   useCallback,
@@ -8,15 +15,6 @@ import {
   type FC,
   type PropsWithChildren,
 } from "react";
-import { ChevronDownIcon, LoaderIcon } from "lucide-react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { useScrollLock } from "@assistant-ui/react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 
 const ANIMATION_DURATION = 200;
 
@@ -223,8 +221,8 @@ ToolGroup.Content = ToolGroupContent;
 
 export {
   ToolGroup,
+  ToolGroupContent,
   ToolGroupRoot,
   ToolGroupTrigger,
-  ToolGroupContent,
   toolGroupVariants,
 };
