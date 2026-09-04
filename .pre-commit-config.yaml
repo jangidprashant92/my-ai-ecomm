@@ -1,0 +1,26 @@
+repos:
+  - repo: local
+    hooks:
+      # 1. Python Backend Linter (Ruff via uv)
+      - id: backend-ruff
+        name: Ruff Linter (Backend)
+        entry: uv run ruff check --fix
+        language: system
+        files: ^backend/
+        types: [python]
+
+      # 2. Python Backend Formatter (Ruff via uv)
+      - id: backend-ruff-format
+        name: Ruff Formatter (Backend)
+        entry: uv run ruff format
+        language: system
+        files: ^backend/
+        types: [python]
+
+      # 3. React Frontend Formatter (Fixed Path Prettier Execution)
+      - id: frontend-prettier
+        name: Prettier (Frontend)
+        entry: npx prettier --write
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|json|css|md)$
+        pass_filenames: true

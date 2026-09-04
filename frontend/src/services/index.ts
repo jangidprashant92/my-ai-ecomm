@@ -1,5 +1,3 @@
-import conversationsService from './conversations';
+import conversationsService from "./conversations";
 
-export {
-  conversationsService,
-};
+export { conversationsService };

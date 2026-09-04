@@ -1,11 +1,10 @@
 from typing import Annotated
 
-from fastapi import Depends
-
 from app.dependencies.database import SessionDep
 from app.modules.todo.controller import TodoController
 from app.modules.todo.repository import TodoRepository
 from app.modules.todo.service import TodoService
+from fastapi import Depends
 
 
 def get_todo_repository(

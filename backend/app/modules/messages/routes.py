@@ -37,11 +37,8 @@ async def get_messages(
     service: MessagesServiceDep,
 ):
     """Get all messages for a specific conversation."""
-    try:
-        messages = service.get_messages_by_conversation(conversation_id)
+    messages = service.get_messages_by_conversation(conversation_id)
 
-        return BaseController().success(
-            data={"messages": messages},
-        )
-    except Exception as e:
-        raise e
+    return BaseController().success(
+        data={"messages": messages},
+    )

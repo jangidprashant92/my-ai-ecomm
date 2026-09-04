@@ -23,13 +23,13 @@ class MistralLLMProvider(BaseLLMProvider):
 
         response = await self.llm.ainvoke(messages)
 
-        return response.content
+        return response.content  # type: ignore
 
     async def stream(
         self,
         messages: list,
         **kwargs,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[dict[str, str]]:
         async for chunk in self.llm.astream(messages):
             if chunk.content:
-                yield str(chunk.content)
+                yield {"type": "text", "content": str(chunk.content)}

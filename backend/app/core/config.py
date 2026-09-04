@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     MISTRAL_API_KEY: str
     MISTRAL_MODEL: str
     LLM_PROVIDER: str
+    MODEL_NAME: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

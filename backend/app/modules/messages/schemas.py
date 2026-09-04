@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class ChatEventType(str, Enum):
     MESSAGE_START = "message_start"
+    THINKING = "thinking"
     TOKEN = "token"
     COMPLETE = "complete"
     ERROR = "error"

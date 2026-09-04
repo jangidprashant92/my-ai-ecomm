@@ -42,12 +42,10 @@ def get_file_templates(module_name: str) -> dict:
     class_name = to_class_name(module_name)
 
     return {
-
         "__init__.py": f'''"""
 {class_name} module.
 """
 ''',
-
         "schemas.py": f'''"""
 Schemas for the {module_name} module.
 
@@ -94,7 +92,6 @@ class {class_name}Response({class_name}Base):
 
     model_config = ConfigDict(from_attributes=True)
 ''',
-
         "repository.py": f'''"""
 Repository layer for the {module_name} module.
 
@@ -167,7 +164,6 @@ class {class_name}Repository:
 
         return True
 ''',
-
         "service.py": f'''"""
 Service layer for the {module_name} module.
 
@@ -236,7 +232,6 @@ class {class_name}Service:
 
         return self.repository.delete(item_id)
 ''',
-
         "dependencies.py": f'''"""
 Dependency injection for the {module_name} module.
 
@@ -287,7 +282,6 @@ def get_{module_name}_service(
 
     return {class_name}Service(repository)
 ''',
-
         "controller.py": f'''"""
 Controller layer for the {module_name} module.
 
@@ -376,7 +370,6 @@ class {class_name}Controller:
             "message": "{class_name} deleted successfully"
         }}
 ''',
-
         "routes.py": f'''"""
 Routes for the {module_name} module.
 
@@ -499,7 +492,7 @@ def delete(
     """
 
     return controller.delete(item_id)
-'''
+''',
     }
 
 
@@ -518,10 +511,7 @@ def create_module(module_name: str, is_blank: bool = False):
 
     # Check if module already exists
     if os.path.exists(target_dir):
-        print(
-            f"Error: Module '{module_name}' already exists "
-            f"at {target_dir}"
-        )
+        print(f"Error: Module '{module_name}' already exists at {target_dir}")
         sys.exit(1)
 
     try:
@@ -535,7 +525,6 @@ def create_module(module_name: str, is_blank: bool = False):
 
         # Create files
         for filename, content in templates.items():
-
             file_path = os.path.join(
                 target_dir,
                 filename,
@@ -551,10 +540,7 @@ def create_module(module_name: str, is_blank: bool = False):
 
             print(f"  📄 Created file: {filename}")
 
-        print(
-            f"\n🎉 Successfully created module "
-            f"'{module_name}'!"
-        )
+        print(f"\n🎉 Successfully created module '{module_name}'!")
 
         print("\nGenerated architecture:")
         print("Route")
@@ -575,9 +561,7 @@ def create_module(module_name: str, is_blank: bool = False):
             f"import router as {module_name}_router"
         )
 
-        print(
-            f"\napp.include_router({module_name}_router)"
-        )
+        print(f"\napp.include_router({module_name}_router)")
 
     except Exception as error:
         print(f"An error occurred: {error}")
@@ -585,11 +569,8 @@ def create_module(module_name: str, is_blank: bool = False):
 
 
 if __name__ == "__main__":
-
     if len(sys.argv) < 2:
-        print(
-            "Usage: python create_module.py <module_name>"
-        )
+        print("Usage: python create_module.py <module_name>")
         sys.exit(1)
 
     name = sys.argv[1].strip().lower()

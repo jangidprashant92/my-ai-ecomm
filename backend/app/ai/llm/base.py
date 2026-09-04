@@ -16,6 +16,6 @@ class BaseLLMProvider(ABC):
         self,
         messages: list,
         **kwargs,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[dict[str, str]]:
         if False:
             yield ""

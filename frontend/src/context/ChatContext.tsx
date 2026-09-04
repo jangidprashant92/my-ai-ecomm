@@ -102,10 +102,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             message_id: msg.message_id,
             conversation_id: msg.conversation_id,
             parent_message_id: msg.parent_message_id,
-            role: msg.role,
+            role: msg.role as "user" | "assistant",
             content: normalizeContent(msg.content),
             createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
-            status: msg.status ?? undefined,
+            // Only assign status if it is an assistant message
+            ...(msg.role === "assistant" && msg.status
+              ? { status: msg.status }
+              : {}),
           }));
 
           setMessages(normalizedMessages);
@@ -175,6 +178,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             message: userText,
           },
           ({ event, data }) => {
+            let token = String(data.content ?? "");
+            if (data.content instanceof Object && "content" in data.content)
+              token = String(data.content.content ?? "");
+
             if (event === "message_start") {
               const backendUserId = String(data.user_message_id);
               const backendAssistantId = String(data.assistant_message_id);
@@ -201,37 +208,72 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
 
-            if (event === "token") {
-              const token = String(data.content ?? "");
+            if (event === "thinking") {
+              console.log("Received thinking event:", token);
+
               const assistantId = String(data.assistant_message_id);
 
               setMessages((prev) =>
                 prev.map((msg) => {
                   if (msg.message_id !== assistantId) return msg;
 
-                  let textUpdated = false;
                   const currentParts = Array.isArray(msg.content)
-                    ? msg.content
+                    ? [...msg.content]
                     : [];
+                  const reasoningIndex = currentParts.findIndex(
+                    (p) => p.type === "reasoning",
+                  );
 
-                  const updatedParts = currentParts.map((part) => {
-                    if (!textUpdated && isTextMessagePart(part)) {
-                      textUpdated = true;
-                      return {
-                        ...part,
-                        text: part.text + token,
-                      };
-                    }
-                    return part;
-                  });
-
-                  if (!textUpdated) {
-                    updatedParts.push({ type: "text", text: token });
+                  if (reasoningIndex !== -1) {
+                    const existing = currentParts[reasoningIndex];
+                    currentParts[reasoningIndex] = {
+                      ...existing,
+                      // Use .reasoning instead of .text
+                      text: (existing.reasoning ?? existing.text ?? "") + token,
+                    };
+                  } else {
+                    // Prepend reasoning block with the proper key
+                    currentParts.unshift({
+                      type: "reasoning",
+                      text: token,
+                    });
                   }
 
                   return {
                     ...msg,
-                    content: updatedParts,
+                    content: currentParts,
+                  };
+                }),
+              );
+              return;
+            }
+
+            if (event === "token") {
+              const assistantId = String(data.assistant_message_id);
+
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.message_id !== assistantId) return msg;
+
+                  const currentParts = Array.isArray(msg.content)
+                    ? [...msg.content]
+                    : [];
+                  const textIndex = currentParts.findIndex(
+                    (p) => p.type === "text",
+                  );
+
+                  if (textIndex !== -1) {
+                    currentParts[textIndex] = {
+                      ...currentParts[textIndex],
+                      text: currentParts[textIndex].text + token,
+                    };
+                  } else {
+                    currentParts.push({ type: "text", text: token });
+                  }
+
+                  return {
+                    ...msg,
+                    content: currentParts,
                   };
                 }),
               );
