@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from app.ai.graph.state import GraphContext
 from app.models.conversation import Message
 from app.modules.conversations.repository import ConversationsRepository
 from app.modules.conversations.schemas import ConversationCreate
@@ -167,8 +168,14 @@ class MessagesService:
         config = {
             "configurable": {
                 "thread_id": str(conversation_id),
-            }
+            },
+            "recursion_limit": 25,
         }
+
+        context = GraphContext(
+            user_id=str(user_id),
+            conversation_id=str(conversation_id),
+        )
 
         try:
             async for chunk in self.chat_graph.astream(
@@ -181,6 +188,7 @@ class MessagesService:
                     ]
                 },
                 config=config,
+                context=context,
                 stream_mode=[
                     "messages",
                     "updates",

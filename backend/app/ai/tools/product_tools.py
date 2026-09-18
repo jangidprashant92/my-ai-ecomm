@@ -1,38 +1,58 @@
-from app.core.database import engine
-from app.models.product import Product
-from langchain.tools import tool
-from sqlmodel import Session, select
+from collections.abc import Callable
+from typing import Any
+
+from app.modules.products.repository import ProductRepository
+from app.modules.products.service import ProductQueryService
+from langchain_core.tools import StructuredTool
+from sqlmodel import Session
 
 
-@tool
-def get_product(product_id: str) -> dict:
-    """Get product information using a product ID.
+class ProductTools:
+    """LangChain tool adapters for product operations."""
 
-    Use this tool when the user asks about a specific product.
+    def __init__(
+        self,
+        session_factory: Callable[[], Session],
+    ) -> None:
+        self.session_factory = session_factory
 
-    Args:
-        product_id: The OList product ID.
-    """
+    def get_product(
+        self,
+        product_id: str,
+    ) -> dict[str, Any]:
+        """Retrieve product information using a product ID."""
 
-    with Session(engine) as session:
-        product = session.exec(
-            select(Product).where(Product.product_id == product_id)
-        ).first()
+        with self.session_factory() as session:
+            repository = ProductRepository(
+                session=session,
+            )
 
-        if product is None:
-            return {
-                "found": False,
-                "product_id": product_id,
-                "message": "Product not found.",
-            }
+            service = ProductQueryService(
+                repository=repository,
+            )
 
-        return {
-            "found": True,
-            "product_id": product.product_id,
-            "category": product.product_category_name,
-            "weight_g": product.product_weight_g,
-            "length_cm": product.product_length_cm,
-            "height_cm": product.product_height_cm,
-            "width_cm": product.product_width_cm,
-            "photos": product.product_photos_qty,
-        }
+            return service.get_product(
+                product_id=product_id,
+            )
+
+
+def create_product_tools(
+    session_factory: Callable[[], Session],
+) -> list[StructuredTool]:
+    """Create LangChain tools for product operations."""
+
+    product_tools = ProductTools(
+        session_factory=session_factory,
+    )
+
+    return [
+        StructuredTool.from_function(
+            func=product_tools.get_product,
+            name="get_product",
+            description=(
+                "Get product information using a product ID, "
+                "including category, dimensions, weight, "
+                "photo count, and other product attributes."
+            ),
+        ),
+    ]

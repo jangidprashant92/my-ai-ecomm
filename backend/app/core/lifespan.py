@@ -7,7 +7,10 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from app.ai.graph.builder import build_chat_graph
 from app.ai.llm.factory import LLMFactory
+from app.ai.tools.order_tools import create_order_tools
+from app.ai.tools.product_tools import create_product_tools
 from app.core.config import settings
+from app.core.database import create_session
 
 
 def generate_graph_png(graph):
@@ -32,9 +35,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         model = LLMFactory.create()
 
+        order_tools = create_order_tools(
+            session_factory=create_session,
+        )
+
+        product_tools = create_product_tools(
+            session_factory=create_session,
+        )
+
         app.state.chat_graph = build_chat_graph(
             model=model,
             checkpointer=checkpointer,
+            order_tools=order_tools,
+            product_tools=product_tools,
         )
 
         # Generate Graph

@@ -13,3 +13,9 @@ engine = create_engine(
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
+
+
+def create_session() -> Session:
+    """Create a new database session."""
+
+    return Session(engine)

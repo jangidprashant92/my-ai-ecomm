@@ -1,9 +1,31 @@
-from app.ai.tools.get_order_products import get_order_products
-from app.ai.tools.order_tools import get_order_status
-from app.ai.tools.product_tools import get_product
+from collections.abc import Callable
 
-ALL_TOOLS = [
-    get_order_status,
-    get_product,
-    get_order_products,
+from app.ai.tools.order_tools import create_order_tools
+from app.ai.tools.product_tools import create_product_tools
+from sqlmodel import Session
+
+
+def create_all_tools(
+    session_factory: Callable[[], Session],
+):
+    """Create all application LangChain tools."""
+
+    order_tools = create_order_tools(
+        session_factory=session_factory,
+    )
+
+    product_tools = create_product_tools(
+        session_factory=session_factory,
+    )
+
+    return [
+        *order_tools,
+        *product_tools,
+    ]
+
+
+__all__ = [
+    "create_all_tools",
+    "create_order_tools",
+    "create_product_tools",
 ]

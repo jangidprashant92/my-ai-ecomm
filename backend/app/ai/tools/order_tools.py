@@ -1,56 +1,86 @@
-import mlflow
-from app.core.database import engine
-from app.models.order import Order
-from langchain.tools import tool
-from sqlmodel import Session, select
+from collections.abc import Callable
+
+from app.modules.orders.repository import OrderRepository
+from app.modules.orders.service import OrderQueryService
+from langchain_core.tools import StructuredTool
+from sqlmodel import Session
 
 
-@tool
-@mlflow.trace(span_type="TOOL", name="get_order_status")
-def get_order_status(order_id: str) -> dict:
-    """Get the current status and delivery information for an e-commerce order.
+class OrderTools:
+    """LangChain tool adapters for order-related operations."""
 
-    Use this tool when the user asks about a specific order's status,
-    delivery state, purchase date, or estimated delivery date.
+    def __init__(
+        self,
+        session_factory: Callable[[], Session],
+    ) -> None:
+        self.session_factory = session_factory
 
-    Args:
-        order_id: The OList order ID.
-    """
+    def get_order_status(
+        self,
+        order_id: str,
+    ) -> dict:
+        """Retrieve status and delivery information for an order."""
 
-    with Session(engine) as session:
-        order = session.exec(select(Order).where(Order.order_id == order_id)).first()
+        with self.session_factory() as session:
+            repository = OrderRepository(
+                session=session,
+            )
 
-        print("order=====================================")
-        print(order)
+            service = OrderQueryService(
+                repository=repository,
+            )
 
-        if order is None:
-            return {
-                "found": False,
-                "order_id": order_id,
-                "message": "Order not found.",
-            }
+            return service.get_order_status(
+                order_id=order_id,
+            )
 
-        return {
-            "found": True,
-            "order_id": order.order_id,
-            "customer_id": order.customer_id,
-            "status": order.order_status,
-            "purchase_date": (
-                order.order_purchase_timestamp.isoformat()
-                if order.order_purchase_timestamp
-                else None
+    def get_order_products(
+        self,
+        order_id: str,
+    ) -> dict:
+        """Retrieve the products belonging to an order."""
+
+        with self.session_factory() as session:
+            repository = OrderRepository(
+                session=session,
+            )
+
+            service = OrderQueryService(
+                repository=repository,
+            )
+
+            return service.get_order_products(
+                order_id=order_id,
+            )
+
+
+def create_order_tools(
+    session_factory: Callable[[], Session],
+) -> list[StructuredTool]:
+    """Create LangChain tools for order operations."""
+
+    order_tools = OrderTools(
+        session_factory=session_factory,
+    )
+
+    return [
+        StructuredTool.from_function(
+            func=order_tools.get_order_status,
+            name="get_order_status",
+            description=(
+                "Get the current status, purchase date, "
+                "delivery date, and other status information "
+                "for an e-commerce order using its order ID."
             ),
-            "approved_at": (
-                order.order_approved_at.isoformat() if order.order_approved_at else None
+        ),
+        StructuredTool.from_function(
+            func=order_tools.get_order_products,
+            name="get_order_products",
+            description=(
+                "Get all products belonging to an e-commerce "
+                "order using the order ID. Use this when the "
+                "user asks for product information based on "
+                "an order ID."
             ),
-            "estimated_delivery": (
-                order.order_estimated_delivery_date.isoformat()
-                if order.order_estimated_delivery_date
-                else None
-            ),
-            "delivered_at": (
-                order.order_delivered_customer_date.isoformat()
-                if order.order_delivered_customer_date
-                else None
-            ),
-        }
+        ),
+    ]
