@@ -1,10 +1,15 @@
 import importlib
+import os
 import pkgutil
 from logging.config import fileConfig
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
+
+# 1. Load the .env file immediately at the top
+load_dotenv()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -14,6 +19,9 @@ config = context.config
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+
+config.set_main_option("sqlalchemy.url", str(os.environ.get("DATABASE_URL")))
 
 
 # for 'autogenerate' support

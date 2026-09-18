@@ -1,9 +1,7 @@
 import uuid
 
 from app.models.conversation import Conversation
-from app.modules.conversations.repository import (
-    ConversationsRepository,
-)
+from app.modules.conversations.repository import ConversationsRepository
 
 
 class ConversationsService:
@@ -16,23 +14,34 @@ class ConversationsService:
         self.repository = repository
 
     async def get_or_create_conversation(
-        self, conversation_data: Conversation
+        self,
+        conversation_id: uuid.UUID | None,
+        title: str,
+        user_id: uuid.UUID,
     ) -> Conversation:
-        """Get an existing conversation by ID or create a new one if it doesn't exist."""
+        """Return an existing conversation or create a new one."""
 
-        # Check if a conversation with the same title exists
-        if conversation_data.conversation_id:
-            exiting = self.repository.get_by_id(conversation_data.conversation_id)
-            if exiting:
-                return exiting
+        if conversation_id is not None:
+            existing = self.repository.get_by_id(conversation_id)
 
-        del (
-            conversation_data.conversation_id
-        )  # Remove the ID to ensure a new conversation is created
-        return self.repository.create(conversation_data)
+            if existing is not None:
+                return existing
+
+        conversation = Conversation(
+            user_id=user_id,
+            title=title,
+        )
+
+        return self.repository.create(conversation)
 
     def get_conversations_by_user(
-        self, user_id: uuid.UUID, limit: int = 10, offset: int = 0
+        self,
+        user_id: uuid.UUID,
+        limit: int = 10,
+        offset: int = 0,
     ):
-        """Get all conversations for a specific user."""
-        return self.repository.get_by_user_id(user_id, limit, offset)
+        return self.repository.get_by_user_id(
+            user_id,
+            limit,
+            offset,
+        )

@@ -13,7 +13,7 @@ class MessagesRepository(BaseRepository[Message]):
     ):
         super().__init__(session, model=Message)
 
-    def get_messages_by_conversation(self, conversation_id: str):
+    def get_messages_by_conversation(self, conversation_id: uuid.UUID):
         """Get all messages for a specific conversation."""
         statement = (
             select(Message)

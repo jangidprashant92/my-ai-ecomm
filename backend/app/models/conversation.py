@@ -1,23 +1,31 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Column, ForeignKey, Uuid
-from sqlalchemy.dialects.postgresql import JSONB  # Or use sqlalchemy.JSON for SQLite
+from sqlalchemy import JSON, Column, ForeignKey
+from sqlalchemy.types import UUID as NativeUUID
 from sqlmodel import Field, Relationship, SQLModel
 
 
 class Conversation(SQLModel, table=True):
     __tablename__ = "conversations"  # type: ignore
-    conversation_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(nullable=False, index=True)
+    conversation_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        sa_column=Column(
+            NativeUUID(as_uuid=True),
+            primary_key=True,
+            default=uuid.uuid4,
+            nullable=False,
+        ),
+    )
+    user_id: uuid.UUID = Field(NativeUUID(as_uuid=True), nullable=False, index=True)
     title: str = Field(default="New Chat", max_length=255)
     is_pinned: bool = Field(default=False, nullable=False)
 
     last_message_id: uuid.UUID | None = Field(
         default=None,
         sa_column=Column(
-            Uuid,
+            NativeUUID(as_uuid=True),
             ForeignKey(
                 "messages.message_id",
                 name="fk_conversations_last_message_id_messages",
@@ -29,7 +37,7 @@ class Conversation(SQLModel, table=True):
     )
 
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+        default_factory=lambda: datetime.now(UTC), nullable=False
     )
 
     messages: list["Message"] = Relationship(
@@ -43,10 +51,16 @@ class Conversation(SQLModel, table=True):
 
 class Message(SQLModel, table=True):
     __tablename__ = "messages"  # type: ignore
-    message_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    message_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        sa_column=Column(
+            NativeUUID(as_uuid=True),
+            primary_key=True,
+        ),
+    )
     conversation_id: uuid.UUID = Field(
         sa_column=Column(
-            Uuid,
+            NativeUUID(as_uuid=True),
             ForeignKey("conversations.conversation_id", ondelete="CASCADE"),
             nullable=False,
             index=True,
@@ -56,7 +70,7 @@ class Message(SQLModel, table=True):
     parent_message_id: uuid.UUID | None = Field(
         default=None,
         sa_column=Column(
-            Uuid,
+            NativeUUID(as_uuid=True),
             ForeignKey("messages.message_id", ondelete="SET NULL"),
             nullable=True,
         ),
@@ -66,18 +80,16 @@ class Message(SQLModel, table=True):
 
     # Store multi-modal blocks: text, images, files, or tool outputs
     content: list[dict[str, Any]] = Field(
-        default_factory=list,
-        sa_column=Column(JSONB, nullable=False),
+        sa_column=Column(JSON, nullable=False, default=[])
     )
 
     # Status tracking (e.g. {"type": "complete", "reason": "stop"} or {"type": "incomplete"})
     status: dict[str, Any] | None = Field(
-        default=None,
-        sa_column=Column(JSONB, nullable=True),
+        default_factory=None, sa_column=Column(JSON, nullable=True)
     )
 
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+        default_factory=lambda: datetime.now(UTC), nullable=False
     )
 
     conversation: Conversation | None = Relationship(

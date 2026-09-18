@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class Order(SQLModel, table=True):
@@ -35,3 +35,5 @@ class Order(SQLModel, table=True):
     )
 
     order_estimated_delivery_date: datetime
+
+    order_items: list["OrderItem"] = Relationship(back_populates="items")  # type: ignore  # noqa: F821

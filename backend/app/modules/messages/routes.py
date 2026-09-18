@@ -1,3 +1,5 @@
+import uuid
+
 from app.common.base_controller import BaseController
 from app.modules.conversations.schemas import ConversationCreate
 from app.modules.messages.dependencies import MessagesServiceDep
@@ -13,11 +15,8 @@ router = APIRouter(
 @router.post("/send-message")
 async def send_message(
     conversation: ConversationCreate,
-    # controller: ConversationsControllerDep,
     service: MessagesServiceDep,
 ):
-    """Send a message in a conversation and stream the response from the LLM."""
-
     new_conversation = service.send_message(conversation)
 
     return StreamingResponse(
@@ -33,7 +32,7 @@ async def send_message(
 
 @router.get("/get-messages/{conversation_id}")
 async def get_messages(
-    conversation_id: str,
+    conversation_id: uuid.UUID,
     service: MessagesServiceDep,
 ):
     """Get all messages for a specific conversation."""

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, ForeignKey, Text, Uuid
 from sqlmodel import Field, SQLModel
@@ -21,7 +21,7 @@ class ConversationSummaryMemory(SQLModel, table=True):
     summary: str = Field(default="", sa_column=Column(Text, nullable=False))
     last_summarized_message_id: uuid.UUID | None = Field(default=None)
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+        default_factory=lambda: datetime.now(UTC), nullable=False
     )
 
 
@@ -41,5 +41,5 @@ class UserMemory(SQLModel, table=True):
         sa_column=Column(Text, nullable=False)
     )  # e.g., "TypeScript and Python"
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+        default_factory=lambda: datetime.now(UTC), nullable=False
     )

@@ -1,7 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+from app.models.order import Order
 
 
 class OrderItem(SQLModel, table=True):
@@ -38,3 +40,5 @@ class OrderItem(SQLModel, table=True):
         max_digits=12,
         decimal_places=2,
     )
+
+    items: Order | None = Relationship(back_populates="order_items")
