@@ -4,9 +4,7 @@ from app.ai.graph.state import ChatState
 from app.ai.schemas.router import Intent
 
 RouteName = Literal[
-    "general_assistant",
-    "order_assistant",
-    "product_assistant",
+    "general_assistant", "order_assistant", "product_assistant", "database_workflow"
 ]
 
 
@@ -22,5 +20,8 @@ def route_by_intent(
 
     if intent == Intent.PRODUCT.value:
         return "product_assistant"
+
+    if intent == Intent.DATABASE.value:
+        return "database_workflow"
 
     return "general_assistant"

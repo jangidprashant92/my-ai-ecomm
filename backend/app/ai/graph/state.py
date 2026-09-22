@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 
 from langgraph.graph import MessagesState
 
@@ -12,7 +13,7 @@ class GraphContext:
 
 
 class ChatState(MessagesState):
-    """Persistent state for a CommerceOps conversation."""
+    """Persistent state for the CommerceOps conversation."""
 
     intent: str | None
     intent_confidence: float | None
@@ -20,3 +21,10 @@ class ChatState(MessagesState):
 
     tool_count: int
     last_tool_name: str | None
+
+    database_plan: dict | None
+    database_result: dict | None
+
+    database_time_resolved: bool
+    database_start_date: date | None
+    database_end_date: date | None

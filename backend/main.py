@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import cast
 
+import mlflow
 from app.common.exception_handlers import (
     app_exception_handler,
     generic_exception_handler,
@@ -10,16 +11,21 @@ from app.core.lifespan import lifespan
 from app.modules.conversations.routes import router as conversations_router
 from app.modules.messages.routes import router as messages_router
 from app.modules.todo.routes import router as todo_router
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import (
     CORSMiddleware,
 )
 from starlette.types import ExceptionHandler
 
+# Load environment variables from the .env file
+load_dotenv()
+
 # # Configure MLflow Tracking URI (Local or Remote)
-# mlflow.set_tracking_uri("http://127.0.0.1:8080")
-# mlflow.set_experiment("Chat Bot")
-# mlflow.autolog()
+mlflow.set_tracking_uri("http://127.0.0.1:8080")
+mlflow.set_experiment("Chat Bot")
+mlflow.autolog()
+
 
 app = FastAPI(title="AI Commerce Platform", lifespan=lifespan)
 

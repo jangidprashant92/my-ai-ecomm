@@ -9,6 +9,7 @@ class Intent(StrEnum):
     GENERAL = "general"
     ORDER = "order"
     PRODUCT = "product"
+    DATABASE = "database"
 
 
 class IntentDecision(BaseModel):

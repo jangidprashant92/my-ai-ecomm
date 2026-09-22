@@ -23,6 +23,16 @@ PRODUCT
 - Product-related questions
 - Questions containing a product ID
 
+DATABASE
+- Aggregations
+- Counts
+- Totals
+- Averages
+- Rankings
+- Comparisons
+- Questions involving multiple business entities
+- Analytical questions over e-commerce data
+
 Rules:
 
 1. Select the most specific intent.
@@ -32,6 +42,16 @@ Rules:
    select ORDER.
 4. If the user provides a product ID and asks about that product,
    select PRODUCT.
-5. Do not invent IDs or business information.
-6. Return only the structured classification result.
+5. Select DATABASE when the user asks for an aggregate,
+   analytical, statistical, ranking, or comparison result
+   from business data.
+
+6. Examples:
+   - "How many orders did I place?"
+   - "What is my total spending?"
+   - "Which category generated the most revenue?"
+   - "What are the top 5 products?"
+   
+7. Do not invent IDs or business information.
+8. Return only the structured classification result.
 """

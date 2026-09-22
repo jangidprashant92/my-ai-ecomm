@@ -16,7 +16,6 @@ from app.core.database import create_session
 def generate_graph_png(graph):
     from main import PROJECT_ROOT
 
-    print(PROJECT_ROOT)
     output_path = f"{PROJECT_ROOT}/docs/root_graph.png"
     graph.get_graph().draw_mermaid_png(output_file_path=output_path)
 
@@ -48,10 +47,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             checkpointer=checkpointer,
             order_tools=order_tools,
             product_tools=product_tools,
+            session_factory=create_session,
         )
-
-        # Generate Graph
-        generate_graph_png(app.state.chat_graph)
+        try:
+            # Generate Graph
+            generate_graph_png(app.state.chat_graph)
+        except (ImportError, OSError, RuntimeError) as error:
+            print(f"Image error: {error}")
 
         yield
 
