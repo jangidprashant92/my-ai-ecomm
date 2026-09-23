@@ -12,6 +12,11 @@ class Settings(BaseSettings):
 
     LANGGRAPH_CHECKPOINT_DB: str = "data/langgraph_checkpoints.sqlite"
 
+    EMBEDDING_MODEL: str
+    QDRANT_URL: str
+    QDRANT_COLLECTION: str
+    EMBEDDING_DIMENSIONS: int
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
