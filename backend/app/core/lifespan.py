@@ -5,13 +5,13 @@ from pathlib import Path
 from fastapi import FastAPI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+from app.ai.agents.commerce_agent import create_commerce_agent_node
 from app.ai.graph.builder import build_chat_graph
 from app.ai.llm.factory import LLMFactory
 from app.ai.rag.embeddings import EmbeddingProvider
 from app.ai.rag.service import RagService
 from app.ai.rag.vector_store import QdrantKnowledgeStore
-from app.ai.tools.order_tools import create_order_tools
-from app.ai.tools.product_tools import create_product_tools
+from app.ai.tools import create_all_tools
 from app.core.config import settings
 from app.core.database import create_session
 
@@ -37,12 +37,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         model = LLMFactory.create()
 
-        order_tools = create_order_tools(
+        commerce_tools = create_all_tools(
             session_factory=create_session,
         )
 
-        product_tools = create_product_tools(
-            session_factory=create_session,
+        commerce_agent_node = create_commerce_agent_node(
+            model=model,
+            tools=commerce_tools,
         )
 
         embedding_provider = EmbeddingProvider()
@@ -61,10 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.chat_graph = build_chat_graph(
             model=model,
             checkpointer=checkpointer,
-            order_tools=order_tools,
-            product_tools=product_tools,
             session_factory=create_session,
             rag_service=rag_service,
+            commerce_agent_node=commerce_agent_node,
         )
         try:
             # Generate Graph

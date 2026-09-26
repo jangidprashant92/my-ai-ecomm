@@ -1,4 +1,5 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from app.ai.graph.nodes import (
     create_assistant_node,
@@ -11,33 +12,31 @@ from app.ai.graph.nodes import (
 )
 from app.ai.graph.nodes.rag_assistant_node import create_rag_node
 from app.ai.graph.state import ChatState, GraphContext
-from app.ai.prompts.chat import (
-    GENERAL_ASSISTANT_PROMPT,
-    ORDER_ASSISTANT_PROMPT,
-    PRODUCT_ASSISTANT_PROMPT,
-)
+from app.ai.prompts.chat import GENERAL_ASSISTANT_PROMPT
 from app.ai.rag.service import RagService
 from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
 from sqlmodel import Session
 
 
 def build_chat_graph(
     model: BaseChatModel,
     checkpointer: BaseCheckpointSaver,
-    order_tools: Sequence[BaseTool],
-    product_tools: Sequence[BaseTool],
     session_factory: Callable[[], Session],
     rag_service: RagService,
+    commerce_agent_node: Callable[[ChatState], Awaitable[dict[str, Any]]],
 ):
     """Build and compile the CommerceOps root graph."""
 
     builder = StateGraph(
         ChatState,
         context_schema=GraphContext,
+    )
+
+    builder.add_node(
+        "commerce_agent",
+        commerce_agent_node,
     )
 
     # ==================================================
@@ -61,32 +60,6 @@ def build_chat_graph(
             model=model,
             tools=None,
             system_prompt=GENERAL_ASSISTANT_PROMPT,
-        ),
-    )
-
-    # ==================================================
-    # ORDER ASSISTANT
-    # ==================================================
-
-    builder.add_node(
-        "order_assistant",
-        create_assistant_node(
-            model=model,
-            tools=order_tools,
-            system_prompt=ORDER_ASSISTANT_PROMPT,
-        ),
-    )
-
-    # ==================================================
-    # PRODUCT ASSISTANT
-    # ==================================================
-
-    builder.add_node(
-        "product_assistant",
-        create_assistant_node(
-            model=model,
-            tools=product_tools,
-            system_prompt=PRODUCT_ASSISTANT_PROMPT,
         ),
     )
 
@@ -132,24 +105,6 @@ def build_chat_graph(
     )
 
     # ==================================================
-    # TOOL NODES
-    # ==================================================
-
-    builder.add_node(
-        "order_tools",
-        ToolNode(
-            list(order_tools),
-        ),
-    )
-
-    builder.add_node(
-        "product_tools",
-        ToolNode(
-            list(product_tools),
-        ),
-    )
-
-    # ==================================================
     # START
     # ==================================================
 
@@ -167,8 +122,7 @@ def build_chat_graph(
         route_by_intent,
         {
             "general_assistant": "general_assistant",
-            "order_assistant": "order_assistant",
-            "product_assistant": "product_assistant",
+            "commerce_agent": "commerce_agent",
             "database_workflow": "database_planner",
             "knowledge_assistant": "knowledge_assistant",
         },
@@ -220,40 +174,9 @@ def build_chat_graph(
         END,
     )
 
-    # ==================================================
-    # ORDER TOOL LOOP
-    # ==================================================
-
-    builder.add_conditional_edges(
-        "order_assistant",
-        tools_condition,
-        {
-            "tools": "order_tools",
-            "__end__": END,
-        },
-    )
-
     builder.add_edge(
-        "order_tools",
-        "order_assistant",
-    )
-
-    # ==================================================
-    # PRODUCT TOOL LOOP
-    # ==================================================
-
-    builder.add_conditional_edges(
-        "product_assistant",
-        tools_condition,
-        {
-            "tools": "product_tools",
-            "__end__": END,
-        },
-    )
-
-    builder.add_edge(
-        "product_tools",
-        "product_assistant",
+        "commerce_agent",
+        END,
     )
 
     return builder.compile(

@@ -15,11 +15,35 @@ class OrderTools:
     ) -> None:
         self.session_factory = session_factory
 
+    @staticmethod
+    def _validate_order_id(
+        order_id: str,
+    ) -> str:
+        value = order_id.strip()
+
+        if not value:
+            raise ValueError("A valid order ID is required.")
+
+        invalid_values = {
+            "order_id",
+            "your_order_id",
+            "unknown",
+            "none",
+            "null",
+        }
+
+        if value.lower() in invalid_values:
+            raise ValueError("A real order ID is required.")
+
+        return value
+
     def get_order_status(
         self,
         order_id: str,
     ) -> dict:
-        """Retrieve status and delivery information for an order."""
+        order_id = self._validate_order_id(
+            order_id,
+        )
 
         with self.session_factory() as session:
             repository = OrderRepository(
@@ -38,7 +62,9 @@ class OrderTools:
         self,
         order_id: str,
     ) -> dict:
-        """Retrieve the products belonging to an order."""
+        order_id = self._validate_order_id(
+            order_id,
+        )
 
         with self.session_factory() as session:
             repository = OrderRepository(

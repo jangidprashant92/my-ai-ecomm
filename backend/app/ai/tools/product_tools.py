@@ -16,11 +16,35 @@ class ProductTools:
     ) -> None:
         self.session_factory = session_factory
 
+    @staticmethod
+    def _validate_product_id(
+        product_id: str,
+    ) -> str:
+        value = product_id.strip()
+
+        if not value:
+            raise ValueError("A valid product ID is required.")
+
+        invalid_values = {
+            "product_id",
+            "your_product_id",
+            "unknown",
+            "none",
+            "null",
+        }
+
+        if value.lower() in invalid_values:
+            raise ValueError("A real product ID is required.")
+
+        return value
+
     def get_product(
         self,
         product_id: str,
     ) -> dict[str, Any]:
-        """Retrieve product information using a product ID."""
+        product_id = self._validate_product_id(
+            product_id,
+        )
 
         with self.session_factory() as session:
             repository = ProductRepository(

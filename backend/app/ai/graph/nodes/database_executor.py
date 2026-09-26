@@ -22,6 +22,18 @@ class DatabaseQueryExecutor:
     ) -> None:
         self.session_factory = session_factory
 
+    @staticmethod
+    def _to_datetime(
+        value: date | None,
+    ) -> datetime | None:
+        if value is None:
+            return None
+
+        return datetime.combine(
+            value,
+            time.min,
+        )
+
     def execute(
         self,
         plan: DatabaseQueryPlan,
@@ -29,6 +41,17 @@ class DatabaseQueryExecutor:
         end_date: date | None,
     ) -> dict[str, Any]:
         """Execute a supported read-only database operation."""
+
+        start_datetime = self._to_datetime(start_date)
+        end_datetime = self._to_datetime(end_date)
+
+        if plan.operation == DatabaseOperation.UNSUPPORTED:
+            return {
+                "status": "unsupported",
+                "message": (
+                    plan.reason or "This operation is not currently supported."
+                ),
+            }
 
         with self.session_factory() as session:
             repository = AnalyticsRepository(
@@ -40,59 +63,30 @@ class DatabaseQueryExecutor:
             )
 
             if plan.operation == DatabaseOperation.COUNT_ORDERS:
-                start_datetime = (
-                    datetime.combine(
-                        start_date,
-                        time.min,
-                    )
-                    if start_date is not None
-                    else None
-                )
-
-                end_datetime = (
-                    datetime.combine(
-                        end_date,
-                        time.min,
-                    )
-                    if end_date is not None
-                    else None
-                )
-
                 return service.count_orders(
                     start_date=start_datetime,
                     end_date=end_datetime,
                 )
 
             if plan.operation == DatabaseOperation.TOTAL_SPENDING:
-                start_datetime = (
-                    datetime.combine(
-                        start_date,
-                        time.min,
-                    )
-                    if start_date is not None
-                    else None
-                )
-
-                end_datetime = (
-                    datetime.combine(
-                        end_date,
-                        time.min,
-                    )
-                    if end_date is not None
-                    else None
-                )
-
                 return service.total_spending(
                     start_date=start_datetime,
                     end_date=end_datetime,
                 )
 
-            if plan.operation == DatabaseOperation.UNSUPPORTED:
-                return {
-                    "status": "unsupported",
-                    "message": plan.reason
-                    or "This operation is not currently supported.",
-                }
+            if plan.operation == DatabaseOperation.TOP_PRODUCTS:
+                return service.top_products(
+                    limit=plan.limit or 10,
+                    start_date=start_datetime,
+                    end_date=end_datetime,
+                )
+
+            if plan.operation == DatabaseOperation.SALES_BY_CATEGORY:
+                return service.sales_by_category(
+                    start_date=start_datetime,
+                    end_date=end_datetime,
+                )
+
             raise ValueError(f"Unsupported database operation: {plan.operation.value}")
 
 

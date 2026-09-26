@@ -5,8 +5,7 @@ from app.ai.schemas.router import Intent
 
 RouteName = Literal[
     "general_assistant",
-    "order_assistant",
-    "product_assistant",
+    "commerce_agent",
     "database_workflow",
     "knowledge_assistant",
 ]
@@ -19,11 +18,11 @@ def route_by_intent(
 
     intent = state.get("intent")
 
-    if intent == Intent.ORDER.value:
-        return "order_assistant"
-
-    if intent == Intent.PRODUCT.value:
-        return "product_assistant"
+    if intent in {
+        Intent.ORDER.value,
+        Intent.PRODUCT.value,
+    }:
+        return "commerce_agent"
 
     if intent == Intent.DATABASE.value:
         return "database_workflow"

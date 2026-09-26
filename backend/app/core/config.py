@@ -4,18 +4,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
 
-    MISTRAL_API_KEY: str
-    MISTRAL_MODEL: str
-
     LLM_PROVIDER: str
     MODEL_NAME: str
 
     LANGGRAPH_CHECKPOINT_DB: str = "data/langgraph_checkpoints.sqlite"
 
     EMBEDDING_MODEL: str
+    EMBEDDING_DIMENSIONS: int
+
     QDRANT_URL: str
     QDRANT_COLLECTION: str
-    EMBEDDING_DIMENSIONS: int
+
     OPENAI_BASE_URL: str
     OPENAI_API_KEY: str
     EMBEDDING_ENDPOINT: str
