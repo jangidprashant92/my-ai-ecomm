@@ -87,6 +87,12 @@ class DatabaseQueryExecutor:
                     end_date=end_datetime,
                 )
 
+            if plan.operation == DatabaseOperation.UNSUPPORTED:
+                return {
+                    "status": "unsupported",
+                    "message": plan.reason
+                    or "This operation is not currently supported.",
+                }
             raise ValueError(f"Unsupported database operation: {plan.operation.value}")
 
 

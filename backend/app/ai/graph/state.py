@@ -28,3 +28,5 @@ class ChatState(MessagesState):
     database_time_resolved: bool
     database_start_date: date | None
     database_end_date: date | None
+
+    rag_sources: list[dict] | None

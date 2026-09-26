@@ -7,6 +7,9 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from app.ai.graph.builder import build_chat_graph
 from app.ai.llm.factory import LLMFactory
+from app.ai.rag.embeddings import EmbeddingProvider
+from app.ai.rag.service import RagService
+from app.ai.rag.vector_store import QdrantKnowledgeStore
 from app.ai.tools.order_tools import create_order_tools
 from app.ai.tools.product_tools import create_product_tools
 from app.core.config import settings
@@ -42,12 +45,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             session_factory=create_session,
         )
 
+        embedding_provider = EmbeddingProvider()
+
+        vector_store = QdrantKnowledgeStore(
+            embeddings=embedding_provider.embeddings,
+        )
+
+        vector_store.connect_existing()
+
+        rag_service = RagService(
+            vector_store=vector_store,
+            model=model,
+        )
+
         app.state.chat_graph = build_chat_graph(
             model=model,
             checkpointer=checkpointer,
             order_tools=order_tools,
             product_tools=product_tools,
             session_factory=create_session,
+            rag_service=rag_service,
         )
         try:
             # Generate Graph

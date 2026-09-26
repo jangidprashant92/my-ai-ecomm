@@ -9,12 +9,14 @@ from app.ai.graph.nodes import (
     create_intent_classifier_node,
     route_by_intent,
 )
+from app.ai.graph.nodes.rag_assistant_node import create_rag_node
 from app.ai.graph.state import ChatState, GraphContext
 from app.ai.prompts.chat import (
     GENERAL_ASSISTANT_PROMPT,
     ORDER_ASSISTANT_PROMPT,
     PRODUCT_ASSISTANT_PROMPT,
 )
+from app.ai.rag.service import RagService
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -29,6 +31,7 @@ def build_chat_graph(
     order_tools: Sequence[BaseTool],
     product_tools: Sequence[BaseTool],
     session_factory: Callable[[], Session],
+    rag_service: RagService,
 ):
     """Build and compile the CommerceOps root graph."""
 
@@ -118,6 +121,17 @@ def build_chat_graph(
     )
 
     # ==================================================
+    # Rag WORKFLOW
+    # ==================================================
+
+    builder.add_node(
+        "knowledge_assistant",
+        create_rag_node(
+            rag_service=rag_service,
+        ),
+    )
+
+    # ==================================================
     # TOOL NODES
     # ==================================================
 
@@ -156,6 +170,7 @@ def build_chat_graph(
             "order_assistant": "order_assistant",
             "product_assistant": "product_assistant",
             "database_workflow": "database_planner",
+            "knowledge_assistant": "knowledge_assistant",
         },
     )
 
@@ -197,6 +212,11 @@ def build_chat_graph(
 
     builder.add_edge(
         "database_answer",
+        END,
+    )
+
+    builder.add_edge(
+        "knowledge_assistant",
         END,
     )
 

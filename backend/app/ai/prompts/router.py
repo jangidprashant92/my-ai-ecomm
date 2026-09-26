@@ -15,6 +15,8 @@ ORDER
 - Order history
 - Order-related questions
 - Questions containing an order ID
+- Questions about a specific order
+- Requires an order ID or an explicit request to identify an order
 
 PRODUCT
 - Product information
@@ -32,6 +34,39 @@ DATABASE
 - Comparisons
 - Questions involving multiple business entities
 - Analytical questions over e-commerce data
+
+KNOWLEDGE
+- Business policies
+- Support SOPs
+- Shipping rules
+- Refund policies
+- Return policies
+- Cancellation policies
+- Fraud policies
+- Escalation procedures
+- Business documentation
+- Questions that require information from the knowledge base
+- Policies
+- SOPs
+- Shipping rules
+- Refund/return/cancellation rules
+- "What should happen?"
+- "When should this be escalated?"
+
+Examples:
+- "What is the refund policy?"
+- "How many days do I have to return a product?"
+- "When should a delayed order be escalated?"
+- "Do refunds over BRL 500 need approval?"
+
+
+Example:
+"My order has been delayed for 4 days"
+without an order ID → KNOWLEDGE
+
+Example:
+"Where is order 12345?"
+→ ORDER
 
 Rules:
 

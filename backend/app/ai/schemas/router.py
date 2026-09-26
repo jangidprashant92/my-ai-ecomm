@@ -10,6 +10,7 @@ class Intent(StrEnum):
     ORDER = "order"
     PRODUCT = "product"
     DATABASE = "database"
+    KNOWLEDGE = "knowledge"
 
 
 class IntentDecision(BaseModel):

@@ -17,6 +17,29 @@ Rules:
   the knowledge base does not contain enough information.
 - Keep the answer clear and concise.
 - Do not claim that a business action was performed.
+
+IMPORTANT:
+
+You must answer ONLY from the provided CommerceOps knowledge base.
+
+Do not attribute CommerceOps policies to another company.
+
+If the user asks about an external company, product,
+organization, or policy that is not represented in the
+retrieved context, state that the information is not
+available in the knowledge base.
+
+The knowledge base contains CommerceOps business policies.
+
+Use the retrieved context only for CommerceOps.
+
+Never attribute a CommerceOps policy to another company,
+brand, organization, or website.
+
+If the user asks about an external organization and the
+retrieved context does not explicitly describe that
+organization, say that the information is not available
+in the knowledge base.
 """
 
 

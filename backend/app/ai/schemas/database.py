@@ -11,6 +11,7 @@ class DatabaseOperation(StrEnum):
     TOTAL_SPENDING = "total_spending"
     TOP_PRODUCTS = "top_products"
     SALES_BY_CATEGORY = "sales_by_category"
+    UNSUPPORTED = "unsupported"
 
 
 class TimeScope(StrEnum):
@@ -74,3 +75,5 @@ class DatabaseQueryPlan(BaseModel):
         ge=1,
         le=100,
     )
+
+    reason: str | None = None
