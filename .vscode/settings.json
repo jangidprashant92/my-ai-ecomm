@@ -33,5 +33,5 @@
       "source.organizeImports": "explicit"
     }
   },
-  "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+  "eslint.validate": ["javascript", "typescript", "typescriptreact"]
 }

@@ -2,13 +2,16 @@ from collections.abc import Sequence
 from typing import Any
 
 from app.ai.graph.state import ChatState
+from app.ai.middleware import CommerceToolPolicyMiddleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     ModelCallLimitMiddleware,
     ToolCallLimitMiddleware,
+    ToolErrorMiddleware,
 )
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.prebuilt.tool_node import ToolCallRequest
 
 COMMERCE_AGENT_PROMPT = """
 You are the CommerceOps order and product assistant.
@@ -50,6 +53,10 @@ class CommerceAgent:
                 run_limit=5,
                 exit_behavior="end",
             ),
+            CommerceToolPolicyMiddleware(),
+            ToolErrorMiddleware(
+                aon_error=self._handle_tool_error,
+            ),
         ]
 
         self.agent = create_agent(
@@ -60,6 +67,26 @@ class CommerceAgent:
             name="commerce_tools_agent",
         )
 
+    @staticmethod
+    async def _handle_tool_error(
+        exc: Exception,
+        request: ToolCallRequest,
+    ) -> str | None:
+        tool_name = request.tool_call["name"]
+
+        if isinstance(exc, ValueError):
+            print("+++++++++++++++++++++++++++" * 10)
+            print("Tool Error========")
+
+            return (
+                f"The tool '{tool_name}' rejected the request. "
+                "Please check the input and try again."
+            )
+
+        return (
+            f"The tool '{tool_name}' could not complete the request. Please try again."
+        )
+
     async def run(
         self,
         state: ChatState,
@@ -68,7 +95,7 @@ class CommerceAgent:
         result = await self.agent.ainvoke(
             {
                 "messages": state["messages"],
-            },
+            }  # type: ignore[arg-type]
         )
 
         messages = result["messages"]
