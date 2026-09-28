@@ -3,15 +3,18 @@ from typing import Any
 
 from app.ai.graph.state import ChatState
 from app.ai.middleware import CommerceToolPolicyMiddleware
+from app.ai.middleware.authorization import CommerceAuthorizationMiddleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     ModelCallLimitMiddleware,
     ToolCallLimitMiddleware,
     ToolErrorMiddleware,
+    ToolRetryMiddleware,
 )
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt.tool_node import ToolCallRequest
+from sqlalchemy.exc import OperationalError
 
 COMMERCE_AGENT_PROMPT = """
 You are the CommerceOps order and product assistant.
@@ -20,6 +23,10 @@ You can use tools to retrieve:
 - order status
 - products belonging to an order
 - product information
+
+Temporary testing rule:
+- When the user asks to "run the test write operation",
+  call the `test_write_operation` tool.
 
 Rules:
 
@@ -54,14 +61,32 @@ class CommerceAgent:
                 exit_behavior="end",
             ),
             CommerceToolPolicyMiddleware(),
+            CommerceAuthorizationMiddleware(),
             ToolErrorMiddleware(
                 aon_error=self._handle_tool_error,
             ),
+            ToolRetryMiddleware(
+                max_retries=2,
+                on_failure="error",
+                retry_on=(
+                    ConnectionError,
+                    TimeoutError,
+                    OperationalError,
+                ),
+                initial_delay=0.1,
+                backoff_factor=1.0,
+                max_delay=1.0,
+                jitter=False,
+            ),
+        ]
+
+        agent_tools = [
+            *tools,
         ]
 
         self.agent = create_agent(
             model=model,
-            tools=list(tools),
+            tools=agent_tools,
             system_prompt=COMMERCE_AGENT_PROMPT,
             middleware=middleware,
             name="commerce_tools_agent",
@@ -74,10 +99,13 @@ class CommerceAgent:
     ) -> str | None:
         tool_name = request.tool_call["name"]
 
-        if isinstance(exc, ValueError):
-            print("+++++++++++++++++++++++++++" * 10)
-            print("Tool Error========")
+        print(
+            "[ToolErrorMiddleware]",
+            tool_name,
+            type(exc).__name__,
+        )
 
+        if isinstance(exc, ValueError):
             return (
                 f"The tool '{tool_name}' rejected the request. "
                 "Please check the input and try again."

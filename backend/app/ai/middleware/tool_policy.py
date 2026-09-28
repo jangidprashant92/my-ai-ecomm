@@ -23,6 +23,8 @@ class CommerceToolPolicyMiddleware(AgentMiddleware):
             "get_order_status",
             "get_order_products",
             "get_product",
+            "test_write_operation",
+            "flaky_test_tool",
         }
     )
 
