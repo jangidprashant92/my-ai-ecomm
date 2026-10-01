@@ -19,19 +19,14 @@ class CommerceToolPolicyMiddleware(AgentMiddleware):
     """
 
     ALLOWED_TOOLS = frozenset(
-        {
-            "get_order_status",
-            "get_order_products",
-            "get_product",
-            "test_write_operation",
-            "flaky_test_tool",
-        }
+        {"get_order_status", "get_order_products", "get_product", "request_refund"}
     )
 
     REQUIRED_ID_FIELDS: ClassVar[dict[str, str]] = {
         "get_order_status": "order_id",
         "get_order_products": "order_id",
         "get_product": "product_id",
+        "request_refund": "order_id",
     }
 
     PLACEHOLDER_VALUES = frozenset(

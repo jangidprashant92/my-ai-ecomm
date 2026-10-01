@@ -1,6 +1,11 @@
 // src/context/ChatContext.tsx
 import type { IMessage, IRawBackendMessage } from "@/interfaces";
-import { streamChat } from "@/services/chat";
+import type { HumanReviewPayload } from "@/interfaces/chat";
+import {
+  resumeHumanReviewStream,
+  streamChat,
+  type HumanReviewRequest,
+} from "@/services/chat";
 import messagesService from "@/services/messages";
 import {
   useExternalStoreRuntime,
@@ -17,7 +22,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useLocation, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 interface ChatContextValue {
   runtime: AssistantRuntime;
@@ -25,6 +30,10 @@ interface ChatContextValue {
   isLoading: boolean;
   isRunning: boolean;
   conversationId?: string;
+  resumeHumanReview: (
+    assistantMessageId: string,
+    review: HumanReviewRequest,
+  ) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -54,23 +63,34 @@ const convertMessage = (message: IMessage): ThreadMessageLike => {
       id: message.message_id,
       role: "assistant",
       content: message.content,
-      createdAt: message.createdAt ? new Date(message.createdAt) : new Date(),
+      createdAt: message.createdAt ?? new Date(),
+
       ...(message.status ? { status: message.status } : {}),
+
+      ...(message.hitl
+        ? {
+            metadata: {
+              custom: {
+                humanReview: message.hitl,
+              },
+            },
+          }
+        : {}),
     };
   }
 
-  // User and system messages MUST NOT have a status property
   return {
     id: message.message_id,
     role: message.role,
     content: message.content,
-    createdAt: message.createdAt ? new Date(message.createdAt) : new Date(),
+    createdAt: message.createdAt ?? new Date(),
   };
 };
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -97,19 +117,41 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (active) {
           const rawItems: IRawBackendMessage[] = res.data.messages ?? [];
 
-          const normalizedMessages: IMessage[] = rawItems.map((msg) => ({
-            id: msg.message_id,
-            message_id: msg.message_id,
-            conversation_id: msg.conversation_id,
-            parent_message_id: msg.parent_message_id,
-            role: msg.role as "user" | "assistant",
-            content: normalizeContent(msg.content),
-            createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
-            // Only assign status if it is an assistant message
-            ...(msg.role === "assistant" && msg.status
-              ? { status: msg.status }
-              : {}),
-          }));
+          const normalizedMessages: IMessage[] = rawItems.map((msg) => {
+            const isPendingHumanReview =
+              msg.role === "assistant" &&
+              msg.status?.type === "waiting_for_approval";
+
+            return {
+              id: msg.message_id,
+              message_id: msg.message_id,
+              conversation_id: msg.conversation_id,
+              parent_message_id: msg.parent_message_id,
+              role: msg.role as "user" | "assistant",
+              content: normalizeContent(msg.content),
+              createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
+
+              ...(msg.role === "assistant" && msg.status
+                ? {
+                    status: isPendingHumanReview
+                      ? {
+                          type: "requires-action",
+                          reason: "interrupt",
+                        }
+                      : {
+                          type: msg.status.type,
+                          reason: msg.status.reason ?? "stop",
+                        },
+                  }
+                : {}),
+
+              ...(isPendingHumanReview && msg.status?.interrupt
+                ? {
+                    hitl: msg.status.interrupt,
+                  }
+                : {}),
+            };
+          });
 
           setMessages(normalizedMessages);
         }
@@ -127,6 +169,167 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       active = false;
     };
   }, [conversationId, location.pathname]);
+
+  function extractStreamText(value: unknown): string {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (value == null) {
+      return "";
+    }
+
+    if (typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+
+      // Backend format:
+      // { type: "text", content: "hello" }
+      if (typeof obj.content === "string") {
+        return obj.content;
+      }
+
+      // Alternative format:
+      // { type: "text", text: "hello" }
+      if (typeof obj.text === "string") {
+        return obj.text;
+      }
+    }
+
+    return "";
+  }
+
+  const resumeHumanReview = useCallback(
+    async (assistantMessageId: string, review: HumanReviewRequest) => {
+      if (!conversationId) {
+        throw new Error("Conversation ID is required.");
+      }
+
+      setIsRunning(true);
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.message_id === assistantMessageId
+            ? {
+                ...msg,
+                content: [{ type: "text", text: "" }],
+                status: { type: "running" },
+                hitl: undefined,
+              }
+            : msg,
+        ),
+      );
+
+      try {
+        await resumeHumanReviewStream(
+          conversationId,
+          review,
+          ({ event, data }) => {
+            if (event === "token") {
+              const token = extractStreamText(data.content);
+
+              if (!token) {
+                return;
+              }
+
+              const assistantId = String(
+                data.assistant_message_id ?? assistantMessageId,
+              );
+
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.message_id !== assistantId) {
+                    return msg;
+                  }
+
+                  const currentParts = Array.isArray(msg.content)
+                    ? [...msg.content]
+                    : [];
+
+                  const textIndex = currentParts.findIndex(
+                    (part) => part.type === "text",
+                  );
+
+                  if (textIndex !== -1) {
+                    const part = currentParts[textIndex];
+
+                    if (part.type === "text") {
+                      currentParts[textIndex] = {
+                        ...part,
+                        text: part.text + token,
+                      };
+                    }
+                  } else {
+                    currentParts.push({
+                      type: "text",
+                      text: token,
+                    });
+                  }
+
+                  return {
+                    ...msg,
+                    content: currentParts,
+                  };
+                }),
+              );
+
+              return;
+            }
+
+            if (event === "complete") {
+              const assistantId = String(
+                data.assistant_message_id ?? assistantMessageId,
+              );
+
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === assistantId
+                    ? {
+                        ...msg,
+                        status: {
+                          type: "complete",
+                          reason: "stop",
+                        },
+                        hitl: undefined,
+                      }
+                    : msg,
+                ),
+              );
+
+              setIsRunning(false);
+              return;
+            }
+
+            if (event === "error") {
+              setIsRunning(false);
+            }
+          },
+        );
+      } catch (error) {
+        console.error("HITL resume failed:", error);
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.message_id === assistantMessageId
+              ? {
+                  ...msg,
+                  status: {
+                    type: "incomplete",
+                    reason: "error",
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  },
+                }
+              : msg,
+          ),
+        );
+
+        throw error;
+      } finally {
+        setIsRunning(false);
+      }
+    },
+    [conversationId],
+  );
 
   const onNew = useCallback(
     async (message: AppendMessage) => {
@@ -178,12 +381,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             message: userText,
           },
           ({ event, data }) => {
-            let token = String(data.content ?? "");
-            if (data.content instanceof Object && "content" in data.content)
-              token = String(data.content.content ?? "");
+            const token = extractStreamText(data.content);
 
             if (event === "message_start") {
+              const backendConversationId = String(data.conversation_id);
+
               const backendUserId = String(data.user_message_id);
+
               const backendAssistantId = String(data.assistant_message_id);
 
               setMessages((prev) =>
@@ -193,18 +397,28 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                       ...msg,
                       id: backendUserId,
                       message_id: backendUserId,
+                      conversation_id: backendConversationId,
                     };
                   }
+
                   if (msg.message_id === temporaryAssistantId) {
                     return {
                       ...msg,
                       id: backendAssistantId,
                       message_id: backendAssistantId,
+                      conversation_id: backendConversationId,
                     };
                   }
+
                   return msg;
                 }),
               );
+
+              // First message from /dashboard
+              if (!conversationId) {
+                navigate(`/chat/${backendConversationId}`);
+              }
+
               return;
             }
 
@@ -280,6 +494,37 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
 
+            if (event === "interrupt") {
+              const assistantId = String(data.assistant_message_id);
+
+              const interruptPayload = data.data as HumanReviewPayload;
+
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === assistantId
+                    ? {
+                        ...msg,
+                        content: [
+                          {
+                            type: "text",
+                            text: "This action requires your approval.",
+                          },
+                        ],
+                        status: {
+                          type: "requires-action",
+                          reason: "interrupt",
+                        },
+                        hitl: interruptPayload,
+                      }
+                    : msg,
+                ),
+              );
+
+              setIsRunning(false);
+
+              return;
+            }
+
             if (event === "complete") {
               const assistantId = String(data.assistant_message_id);
               setMessages((prev) =>
@@ -306,11 +551,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     [conversationId],
   );
 
+  const hasPendingHumanReview = messages.some(
+    (message) => message.role === "assistant" && message.hitl != null,
+  );
+
   const runtime = useExternalStoreRuntime({
     messages,
     convertMessage,
     isRunning,
     onNew,
+    isSendDisabled: hasPendingHumanReview,
   });
 
   return (
@@ -321,6 +571,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isRunning,
         conversationId,
+        resumeHumanReview,
       }}
     >
       {children}

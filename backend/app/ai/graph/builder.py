@@ -1,5 +1,4 @@
-from collections.abc import Awaitable, Callable
-from typing import Any
+from collections.abc import Callable
 
 from app.ai.graph.nodes import (
     create_assistant_node,
@@ -17,6 +16,7 @@ from app.ai.rag.service import RagService
 from langchain_core.language_models import BaseChatModel
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.pregel import Pregel
 from sqlmodel import Session
 
 
@@ -25,7 +25,7 @@ def build_chat_graph(
     checkpointer: BaseCheckpointSaver,
     session_factory: Callable[[], Session],
     rag_service: RagService,
-    commerce_agent_node: Callable[[ChatState], Awaitable[dict[str, Any]]],
+    commerce_agent: Pregel,
 ):
     """Build and compile the CommerceOps root graph."""
 
@@ -36,7 +36,7 @@ def build_chat_graph(
 
     builder.add_node(
         "commerce_agent",
-        commerce_agent_node,
+        commerce_agent,
     )
 
     # ==================================================

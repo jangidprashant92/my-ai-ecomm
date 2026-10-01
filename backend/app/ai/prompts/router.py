@@ -89,4 +89,23 @@ Rules:
    
 7. Do not invent IDs or business information.
 8. Return only the structured classification result.
+
+ORDER also includes action requests involving a specific order,
+such as:
+- Request a refund for an order
+- Cancel an order
+- Change an order
+- Perform an order-related action
+
+Example:
+"Request a refund for order e481f51cbdc54678b7cc49136f2d6af7"
+→ ORDER
+
+Example:
+"What is the refund policy?"
+→ KNOWLEDGE
+
+If the user asks the system to perform an action on a specific
+order, select ORDER even when the action involves a refund or
+another business policy.
 """

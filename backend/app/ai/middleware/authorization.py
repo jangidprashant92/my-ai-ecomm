@@ -12,21 +12,19 @@ logger = logging.getLogger(__name__)
 
 
 class CommerceAuthorizationMiddleware(AgentMiddleware):
-    """
-    Business authorization guardrail for CommerceAgent.
-
-    Currently allows read-only commerce operations.
-    Future write operations can require stronger authorization
-    or human approval.
-    """
+    """Business authorization guardrail for CommerceAgent."""
 
     READ_ONLY_TOOLS = frozenset(
         {
             "get_order_status",
             "get_order_products",
             "get_product",
-            "flaky_test_tool",
-            "test_write_operation",
+        }
+    )
+
+    HITL_REQUIRED_TOOLS = frozenset(
+        {
+            "request_refund",
         }
     )
 
@@ -44,6 +42,14 @@ class CommerceAuthorizationMiddleware(AgentMiddleware):
         if tool_name in self.READ_ONLY_TOOLS:
             logger.info(
                 "Authorized read-only tool: %s",
+                tool_name,
+            )
+
+            return await handler(request)
+
+        if tool_name in self.HITL_REQUIRED_TOOLS:
+            logger.info(
+                "Tool requires human approval: %s",
                 tool_name,
             )
 

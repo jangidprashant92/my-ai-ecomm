@@ -37,3 +37,27 @@ class MessagesRepository(BaseRepository[Message]):
 
         # Reverse them so they are returned in chronological order
         return list(reversed(recent_messages))
+
+    async def get_pending_human_review(
+        self,
+        conversation_id: uuid.UUID,
+    ) -> Message | None:
+        statement = (
+            select(Message)
+            .where(
+                Message.conversation_id == conversation_id,
+                Message.role == "assistant",
+            )
+            .order_by(desc(Message.created_at))
+            .limit(10)
+        )
+
+        messages = self.session.exec(statement).all()
+
+        for message in messages:
+            status = message.status or {}
+
+            if status.get("type") == "waiting_for_approval":
+                return message
+
+        return None

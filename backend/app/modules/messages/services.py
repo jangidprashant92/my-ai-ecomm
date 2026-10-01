@@ -10,7 +10,8 @@ from app.modules.conversations.repository import ConversationsRepository
 from app.modules.conversations.schemas import ConversationCreate
 from app.modules.conversations.services import ConversationsService
 from app.modules.messages.repository import MessagesRepository
-from app.modules.messages.schemas import ChatEventType
+from app.modules.messages.schemas import ChatEventType, HumanReviewRequest
+from langgraph.types import Command
 
 
 class MessagesService:
@@ -177,6 +178,9 @@ class MessagesService:
             conversation_id=str(conversation_id),
         )
 
+        interrupted = False
+        interrupt_payload: dict[str, Any] | None = None
+
         try:
             async for chunk in self.chat_graph.astream(
                 {
@@ -229,16 +233,58 @@ class MessagesService:
                     update_data = chunk["data"]
 
                     if "__interrupt__" in update_data:
-                        # HITL will use this later.
+                        interrupted = True
+
+                        interrupt_obj = update_data["__interrupt__"][0]
+                        interrupt_value = interrupt_obj.value
+
+                        interrupt_payload = {
+                            "action_requests": interrupt_value["action_requests"],
+                            "review_configs": interrupt_value["review_configs"],
+                        }
+
+                        assistant_message.content = [
+                            {
+                                "type": "text",
+                                "text": "Waiting for human approval.",
+                            }
+                        ]
+
+                        assistant_message.status = {
+                            "type": "waiting_for_approval",
+                            "reason": "human_review",
+                            "interrupt": interrupt_payload,
+                        }
+
+                        self.message_repository.update(
+                            assistant_message,
+                        )
+
+                        conversation.last_message_id = assistant_message.message_id
+
+                        conversation.updated_at = datetime.now(UTC)
+
+                        self.conversation_repository.session.commit()
+
                         yield self._format_sse(
-                            event="interrupt",
+                            event=ChatEventType.INTERRUPT.value,
                             data={
+                                "conversation_id": str(conversation_id),
                                 "assistant_message_id": str(
-                                    assistant_message.message_id
+                                    assistant_message.message_id,
                                 ),
-                                "data": str(update_data["__interrupt__"]),
+                                "data": interrupt_payload,
                             },
                         )
+
+                        break
+
+            # ------------------------------------------------
+            # HITL INTERRUPT
+            # ------------------------------------------------
+
+            if interrupted:
+                return
 
             # ------------------------------------------------
             # 6. SAVE FINAL ASSISTANT MESSAGE
@@ -316,6 +362,188 @@ class MessagesService:
                 event=ChatEventType.ERROR.value,
                 data={
                     "error": str(exc),
+                },
+            )
+
+            raise
+
+    async def resume_human_review(
+        self,
+        conversation_id: uuid.UUID,
+        review: HumanReviewRequest,
+    ):
+        config = {
+            "configurable": {
+                "thread_id": str(conversation_id),
+            },
+            "recursion_limit": 25,
+        }
+
+        context = GraphContext(
+            user_id="12345678-1234-4234-8234-123456789abc",
+            conversation_id=str(conversation_id),
+        )
+
+        # ---------------------------------------------
+        # 1. Find pending assistant message
+        # ---------------------------------------------
+
+        assistant_message = await self.message_repository.get_pending_human_review(
+            conversation_id,
+        )
+
+        if assistant_message is None:
+            yield self._format_sse(
+                event=ChatEventType.ERROR.value,
+                data={
+                    "error": "No pending human review found.",
+                },
+            )
+            return
+
+        # ---------------------------------------------
+        # 2. Build decision
+        # ---------------------------------------------
+
+        decision: dict[str, Any] = {
+            "type": review.decision.value,
+        }
+
+        if review.decision.value == "reject" and review.message:
+            decision["message"] = review.message
+
+        resume_command = Command(
+            resume={
+                "decisions": [
+                    decision,
+                ],
+            },
+        )
+
+        # ---------------------------------------------
+        # 3. Resume LangGraph
+        # ---------------------------------------------
+
+        full_response = ""
+
+        try:
+            async for chunk in self.chat_graph.astream(
+                resume_command,
+                config=config,
+                context=context,
+                stream_mode=[
+                    "messages",
+                    "updates",
+                ],
+                version="v2",
+            ):
+                if chunk["type"] == "messages":
+                    token, metadata = chunk["data"]
+
+                    text = self._extract_text_content(
+                        token.content,
+                    )
+
+                    if not text:
+                        continue
+
+                    full_response += text
+
+                    yield self._format_sse(
+                        event=ChatEventType.TOKEN.value,
+                        data={
+                            "conversation_id": str(
+                                conversation_id,
+                            ),
+                            "assistant_message_id": str(
+                                assistant_message.message_id,
+                            ),
+                            "content": {
+                                "type": "text",
+                                "content": text,
+                            },
+                            "metadata": metadata,
+                        },
+                    )
+
+            # ---------------------------------------------
+            # 4. Persist final assistant response
+            # ---------------------------------------------
+
+            assistant_message.content = [
+                {
+                    "type": "text",
+                    "text": full_response,
+                }
+            ]
+
+            assistant_message.status = {
+                "type": "complete",
+                "reason": "stop",
+                "human_review": {
+                    "decision": review.decision.value,
+                },
+            }
+
+            self.message_repository.update(
+                assistant_message,
+            )
+
+            # ---------------------------------------------
+            # 5. Update conversation
+            # ---------------------------------------------
+
+            conversation = self.conversation_repository.get(
+                conversation_id,
+            )
+
+            if conversation:
+                conversation.last_message_id = assistant_message.message_id
+                conversation.updated_at = datetime.now(UTC)
+
+            self.conversation_repository.session.commit()
+
+            # ---------------------------------------------
+            # 6. Tell frontend stream is complete
+            # ---------------------------------------------
+
+            yield self._format_sse(
+                event=ChatEventType.COMPLETE.value,
+                data={
+                    "conversation_id": str(
+                        conversation_id,
+                    ),
+                    "assistant_message_id": str(
+                        assistant_message.message_id,
+                    ),
+                    "human_review": {
+                        "decision": review.decision.value,
+                    },
+                },
+            )
+
+        except Exception as exc:
+            assistant_message.status = {
+                "type": "incomplete",
+                "reason": "error",
+                "human_review": {
+                    "decision": review.decision.value,
+                },
+            }
+
+            self.message_repository.update(
+                assistant_message,
+            )
+
+            self.message_repository.session.commit()
+
+            yield self._format_sse(
+                event=ChatEventType.ERROR.value,
+                data={
+                    "error": str(exc),
+                    "assistant_message_id": str(
+                        assistant_message.message_id,
+                    ),
                 },
             )
 

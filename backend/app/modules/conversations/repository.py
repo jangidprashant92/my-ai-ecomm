@@ -24,3 +24,12 @@ class ConversationsRepository(BaseRepository[Conversation]):
             .limit(limit)  # Limit the total results returned
         )
         return self.session.exec(statement).all()
+
+    def get(self, conversation_id: uuid.UUID):
+        statement = (
+            select(Conversation)
+            .where(Conversation.conversation_id == conversation_id)
+            .order_by(desc(Conversation.updated_at))
+        )
+
+        return self.session.exec(statement).first()

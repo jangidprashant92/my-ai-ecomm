@@ -25,12 +25,12 @@ import {
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useChat } from "@/context/ChatContext";
 import { cn } from "@/lib/utils";
 import {
   ActionBarMorePrimitive,
   ActionBarPrimitive,
   AuiIf,
-  type AssistantState,
   BranchPickerPrimitive,
   ComposerPrimitive,
   ErrorPrimitive,
@@ -38,10 +38,11 @@ import {
   MessagePrimitive,
   SuggestionPrimitive,
   ThreadPrimitive,
+  useAuiState,
+  type AssistantState,
   type FileMessagePartComponent,
   type ImageMessagePartComponent,
   type ToolCallMessagePartComponent,
-  useAuiState,
 } from "@assistant-ui/react";
 import {
   ArrowDownIcon,
@@ -64,6 +65,7 @@ import {
   type FC,
   type PropsWithChildren,
 } from "react";
+import { HumanReviewCard } from "../human-review-card";
 
 export type ThreadGroupPart = MessagePrimitive.GroupedParts.GroupPart;
 
@@ -391,6 +393,14 @@ const AssistantMessage: FC = () => {
     ReasoningGroup,
   } = useContext(ThreadComponentsContext);
 
+  const { messages } = useChat();
+
+  const messageId = useAuiState((s) => s.message.id);
+
+  const currentMessage = messages.find(
+    (message) => message.message_id === messageId,
+  );
+
   const ACTION_BAR_PT = "pt-1.5";
   // Keep the action bar inside the contained root's paint box, then cancel its reserved space in flow.
   const ACTION_BAR_HEIGHT = `min-h-7.5 ${ACTION_BAR_PT}`;
@@ -480,6 +490,12 @@ const AssistantMessage: FC = () => {
             }
           }}
         </MessagePrimitive.GroupedParts>
+        {currentMessage?.hitl && (
+          <HumanReviewCard
+            messageId={currentMessage.message_id}
+            payload={currentMessage.hitl}
+          />
+        )}
         <MessageError />
       </div>
 

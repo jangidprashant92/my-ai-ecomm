@@ -102,3 +102,64 @@ function parseSSEEvent(
     console.error("Invalid SSE event:", rawEvent);
   }
 }
+
+export interface HumanReviewRequest {
+  decision: "approve" | "reject";
+  message?: string;
+}
+
+export async function resumeHumanReviewStream(
+  conversationId: string,
+  payload: HumanReviewRequest,
+  onEvent: (event: StreamEvent) => void,
+): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/messages/conversations/${conversationId}/human-review`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  if (!response.body) {
+    throw new Error("Streaming is not supported by this browser.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, {
+      stream: true,
+    });
+
+    const events = buffer.split("\n\n");
+
+    buffer = events.pop() || "";
+
+    for (const rawEvent of events) {
+      parseSSEEvent(rawEvent, onEvent);
+    }
+  }
+
+  buffer += decoder.decode();
+
+  if (buffer.trim()) {
+    parseSSEEvent(buffer, onEvent);
+  }
+}
