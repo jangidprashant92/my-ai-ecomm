@@ -13,15 +13,15 @@ const API_URL = "http://localhost:8000";
 export async function streamChat(
   payload: ChatStreamRequest,
   onEvent: (event: StreamEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const response = await fetch(`${API_URL}/messages/send-message`, {
     method: "POST",
-
     headers: {
       "Content-Type": "application/json",
     },
-
     body: JSON.stringify(payload),
+    signal,
   });
 
   if (!response.ok) {
@@ -33,7 +33,6 @@ export async function streamChat(
   }
 
   const reader = response.body.getReader();
-
   const decoder = new TextDecoder();
 
   let buffer = "";
@@ -51,7 +50,6 @@ export async function streamChat(
 
     const events = buffer.split("\n\n");
 
-    // Keep incomplete SSE event
     buffer = events.pop() || "";
 
     for (const rawEvent of events) {
@@ -59,7 +57,6 @@ export async function streamChat(
     }
   }
 
-  // Flush remaining decoder content
   buffer += decoder.decode();
 
   if (buffer.trim()) {
@@ -113,6 +110,7 @@ export async function resumeHumanReviewStream(
   conversationId: string,
   payload: HumanReviewRequest,
   onEvent: (event: StreamEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const response = await fetch(
     `${API_URL}/messages/conversations/${conversationId}/human-review`,
@@ -122,6 +120,7 @@ export async function resumeHumanReviewStream(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal,
     },
   );
 

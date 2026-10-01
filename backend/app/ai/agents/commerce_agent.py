@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.ai.middleware import CommerceToolPolicyMiddleware
 from app.ai.middleware.authorization import CommerceAuthorizationMiddleware
+from app.ai.middleware.reasoning_cleanup import StripHistoricalReasoningMiddleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
@@ -39,6 +40,16 @@ Rules:
 7. Never claim that a refund was executed unless the refund tool
    actually confirms execution.
 8. Keep the final answer concise.
+
+Tool-result presentation rules:
+
+9. Never expose raw JSON tool output to the user.
+10. Convert tool results into a concise natural-language response.
+11. Do not repeat internal fields unless they are useful to the user.
+12. For refund results, clearly state the refund status, order ID,
+    amount, and reason.
+13. Never expose internal execution fields such as execution_mode
+    unless explicitly requested.
 """
 
 
@@ -66,6 +77,7 @@ class CommerceAgent:
     ) -> None:
 
         middleware = [
+            StripHistoricalReasoningMiddleware(),
             ModelCallLimitMiddleware(
                 run_limit=5,
                 exit_behavior="end",

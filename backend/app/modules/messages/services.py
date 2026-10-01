@@ -11,7 +11,15 @@ from app.modules.conversations.schemas import ConversationCreate
 from app.modules.conversations.services import ConversationsService
 from app.modules.messages.repository import MessagesRepository
 from app.modules.messages.schemas import ChatEventType, HumanReviewRequest
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langgraph.types import Command
+
+USER_VISIBLE_NODES = {
+    "general_assistant",
+    "database_answer",
+    "knowledge_assistant",
+    "commerce_agent",
+}
 
 
 class MessagesService:
@@ -50,6 +58,24 @@ class MessagesService:
             }
         ]
 
+    def _is_user_visible_model_stream(
+        self,
+        metadata: dict[str, Any],
+    ) -> bool:
+        node_name = metadata.get("langgraph_node")
+
+        if node_name in USER_VISIBLE_NODES:
+            return True
+
+        checkpoint_ns = str(
+            metadata.get(
+                "langgraph_checkpoint_ns",
+                "",
+            )
+        )
+
+        return "commerce_agent" in checkpoint_ns
+
     def _extract_text_content(
         self,
         content: Any,
@@ -71,6 +97,74 @@ class MessagesService:
                         parts.append(str(text))
 
             return "".join(parts)
+
+        return ""
+
+    def _extract_model_output_text(
+        self,
+        message: Any,
+    ) -> str:
+        """
+        Return only user-visible assistant text.
+
+        Ignore:
+        - reasoning
+        - tool calls
+        - tool call chunks
+        - tool results
+        """
+
+        if isinstance(message, ToolMessage):
+            return ""
+
+        if not isinstance(
+            message,
+            (AIMessage, AIMessageChunk),
+        ):
+            return ""
+
+        # Never stream tool-call messages/chunks.
+        if getattr(message, "tool_calls", None):
+            return ""
+
+        if getattr(message, "tool_call_chunks", None):
+            return ""
+
+        # --------------------------------------------------
+        # IMPORTANT:
+        # Use normalized content blocks as the source of truth.
+        # --------------------------------------------------
+
+        blocks = getattr(message, "content_blocks", None)
+
+        if isinstance(blocks, list):
+            text_parts: list[str] = []
+
+            for block in blocks:
+                if not isinstance(block, dict):
+                    continue
+
+                block_type = block.get("type")
+
+                # Only final/user-visible text
+                if block_type != "text":
+                    continue
+
+                text = block.get("text")
+
+                if isinstance(text, str) and text:
+                    text_parts.append(text)
+
+            return "".join(text_parts)
+
+        # --------------------------------------------------
+        # Fallback for providers that return plain content
+        # --------------------------------------------------
+
+        content = message.content
+
+        if isinstance(content, str):
+            return content
 
         return ""
 
@@ -206,7 +300,10 @@ class MessagesService:
                 if chunk["type"] == "messages":
                     token, metadata = chunk["data"]
 
-                    text = self._extract_text_content(token.content)
+                    if not self._is_user_visible_model_stream(metadata):
+                        continue
+
+                    text = self._extract_model_output_text(token)
 
                     if not text:
                         continue
@@ -216,12 +313,10 @@ class MessagesService:
                     yield self._format_sse(
                         event=ChatEventType.TOKEN.value,
                         data={
-                            "assistant_message_id": str(assistant_message.message_id),
-                            "content": {
-                                "type": "text",
-                                "content": text,
-                            },
-                            "metadata": metadata,
+                            "assistant_message_id": str(
+                                assistant_message.message_id,
+                            ),
+                            "content": text,
                         },
                     )
 
@@ -441,9 +536,20 @@ class MessagesService:
                 if chunk["type"] == "messages":
                     token, metadata = chunk["data"]
 
-                    text = self._extract_text_content(
-                        token.content,
+                    print(
+                        "RESUME METADATA:",
+                        {
+                            "langgraph_node": metadata.get("langgraph_node"),
+                            "langgraph_checkpoint_ns": metadata.get(
+                                "langgraph_checkpoint_ns"
+                            ),
+                        },
                     )
+
+                    if not self._is_user_visible_model_stream(metadata):
+                        continue
+
+                    text = self._extract_model_output_text(token)
 
                     if not text:
                         continue
@@ -453,17 +559,11 @@ class MessagesService:
                     yield self._format_sse(
                         event=ChatEventType.TOKEN.value,
                         data={
-                            "conversation_id": str(
-                                conversation_id,
-                            ),
+                            "conversation_id": str(conversation_id),
                             "assistant_message_id": str(
                                 assistant_message.message_id,
                             ),
-                            "content": {
-                                "type": "text",
-                                "content": text,
-                            },
-                            "metadata": metadata,
+                            "content": text,
                         },
                     )
 

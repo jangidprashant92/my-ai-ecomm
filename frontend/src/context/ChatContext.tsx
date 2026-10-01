@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -95,6 +96,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(conversationId));
+
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!conversationId) {
@@ -204,6 +207,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Conversation ID is required.");
       }
 
+      const controller = new AbortController();
+
+      abortControllerRef.current = controller;
+
       setIsRunning(true);
 
       setMessages((prev) =>
@@ -303,8 +310,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               setIsRunning(false);
             }
           },
+          controller.signal,
         );
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.log("Human review resume cancelled.");
+          return;
+        }
         console.error("HITL resume failed:", error);
 
         setMessages((prev) =>
@@ -325,6 +337,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
         throw error;
       } finally {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
         setIsRunning(false);
       }
     },
@@ -366,11 +381,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         status: { type: "running" },
       };
 
+      const controller = new AbortController();
+
+      abortControllerRef.current = controller;
+
       setMessages((prev) => [
         ...prev,
         optimisticUserMsg,
         optimisticAssistantMsg,
       ]);
+
       setIsRunning(true);
 
       try {
@@ -541,15 +561,39 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               setIsRunning(false);
             }
           },
+          controller.signal,
         );
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.log("Chat generation cancelled.");
+          return;
+        }
+
         console.error("Streaming error:", error);
       } finally {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
+
         setIsRunning(false);
       }
     },
     [conversationId],
   );
+
+  const onCancel = useCallback(async () => {
+    const controller = abortControllerRef.current;
+
+    if (!controller) {
+      return;
+    }
+
+    controller.abort();
+
+    abortControllerRef.current = null;
+
+    setIsRunning(false);
+  }, []);
 
   const hasPendingHumanReview = messages.some(
     (message) => message.role === "assistant" && message.hitl != null,
@@ -560,6 +604,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     convertMessage,
     isRunning,
     onNew,
+    onCancel,
     isSendDisabled: hasPendingHumanReview,
   });
 
