@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from decimal import Decimal
 
 from app.ai.middleware import CommerceToolPolicyMiddleware
 from app.ai.middleware.authorization import CommerceAuthorizationMiddleware
@@ -41,6 +42,20 @@ Rules:
 """
 
 
+def refund_requires_approval(
+    request: ToolCallRequest,
+) -> bool:
+    args = request.tool_call.get("args", {})
+
+    try:
+        amount = Decimal(str(args.get("amount", "0")))
+    except (TypeError, ValueError):
+        # Fail closed if the amount is invalid.
+        return True
+
+    return amount > Decimal(500)
+
+
 class CommerceAgent:
     """Agent responsible for order, product, and refund operations."""
 
@@ -68,8 +83,9 @@ class CommerceAgent:
                             "approve",
                             "reject",
                         ],
+                        "when": refund_requires_approval,
                         "description": (
-                            "A refund request requires human approval before execution."
+                            "Refunds above BRL 500 require human approval."
                         ),
                     },
                 },

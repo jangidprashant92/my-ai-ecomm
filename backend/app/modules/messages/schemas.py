@@ -1,3 +1,4 @@
+import uuid
 from enum import Enum
 from typing import Any
 
@@ -24,5 +25,6 @@ class HumanDecision(str, Enum):
 
 
 class HumanReviewRequest(BaseModel):
+    assistant_message_id: uuid.UUID
     decision: HumanDecision
     message: str | None = None

@@ -41,23 +41,20 @@ class MessagesRepository(BaseRepository[Message]):
     async def get_pending_human_review(
         self,
         conversation_id: uuid.UUID,
+        assistant_message_id: uuid.UUID,
     ) -> Message | None:
-        statement = (
-            select(Message)
-            .where(
-                Message.conversation_id == conversation_id,
-                Message.role == "assistant",
-            )
-            .order_by(desc(Message.created_at))
-            .limit(10)
+        statement = select(Message).where(
+            Message.conversation_id == conversation_id,
+            Message.message_id == assistant_message_id,
+            Message.role == "assistant",
         )
 
-        messages = self.session.exec(statement).all()
+        message = self.session.exec(statement).first()
 
-        for message in messages:
-            status = message.status or {}
+        if not message:
+            return None
 
-            if status.get("type") == "waiting_for_approval":
-                return message
+        if (message.status or {}).get("type") != "waiting_for_approval":
+            return None
 
-        return None
+        return message

@@ -33,6 +33,7 @@ export function HumanReviewCard({ messageId, payload }: HumanReviewCardProps) {
 
     try {
       await resumeHumanReview(messageId, {
+        assistant_message_id: messageId,
         decision,
         ...(decision === "reject"
           ? {

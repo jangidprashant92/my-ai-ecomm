@@ -389,7 +389,8 @@ class MessagesService:
         # ---------------------------------------------
 
         assistant_message = await self.message_repository.get_pending_human_review(
-            conversation_id,
+            conversation_id=conversation_id,
+            assistant_message_id=review.assistant_message_id,
         )
 
         if assistant_message is None:

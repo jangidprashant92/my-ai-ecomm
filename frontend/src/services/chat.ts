@@ -104,6 +104,7 @@ function parseSSEEvent(
 }
 
 export interface HumanReviewRequest {
+  assistant_message_id: string;
   decision: "approve" | "reject";
   message?: string;
 }
