@@ -24,7 +24,9 @@ load_dotenv()
 # # Configure MLflow Tracking URI (Local or Remote)
 mlflow.set_tracking_uri("http://127.0.0.1:8080")
 mlflow.set_experiment("Chat Bot")
-mlflow.autolog()
+mlflow.langchain.autolog(  # type: ignore
+    silent=True,
+)
 
 
 app = FastAPI(title="AI Commerce Platform", lifespan=lifespan)

@@ -11,6 +11,7 @@ from app.modules.conversations.schemas import ConversationCreate
 from app.modules.conversations.services import ConversationsService
 from app.modules.messages.repository import MessagesRepository
 from app.modules.messages.schemas import ChatEventType, HumanReviewRequest
+from app.observability.mlflow_tracer import HITLAwareMlflowTracer
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langgraph.types import Command
 
@@ -265,6 +266,9 @@ class MessagesService:
                 "thread_id": str(conversation_id),
             },
             "recursion_limit": 25,
+            "callbacks": [
+                HITLAwareMlflowTracer(),
+            ],
         }
 
         context = GraphContext(
@@ -372,7 +376,7 @@ class MessagesService:
                             },
                         )
 
-                        break
+                        continue
 
             # ------------------------------------------------
             # HITL INTERRUPT
@@ -472,6 +476,9 @@ class MessagesService:
                 "thread_id": str(conversation_id),
             },
             "recursion_limit": 25,
+            "callbacks": [
+                HITLAwareMlflowTracer(),
+            ],
         }
 
         context = GraphContext(
