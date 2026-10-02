@@ -7,8 +7,9 @@ from pydantic import BaseModel
 
 class ChatEventType(str, Enum):
     MESSAGE_START = "message_start"
-    THINKING = "thinking"
     TOKEN = "token"
+    THINKING = "thinking"
+    SOURCES = "sources"
     INTERRUPT = "interrupt"
     COMPLETE = "complete"
     ERROR = "error"

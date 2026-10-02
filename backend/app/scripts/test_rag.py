@@ -6,6 +6,7 @@ from app.ai.rag import (
     QdrantKnowledgeStore,
     RagService,
 )
+from app.ai.rag.query_rewriter import ContextualQueryRewriter
 
 
 async def main() -> None:
@@ -19,9 +20,14 @@ async def main() -> None:
 
     model = LLMFactory.create()
 
+    query_rewriter = ContextualQueryRewriter(
+        model=model,
+    )
+
     rag_service = RagService(
         vector_store=vector_store,
         model=model,
+        query_rewriter=query_rewriter,
     )
 
     questions = [
@@ -37,7 +43,6 @@ async def main() -> None:
 
         answer, documents = await rag_service.answer(
             query=question,
-            k=4,
         )
 
         print("\nAnswer:")

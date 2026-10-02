@@ -63,6 +63,12 @@ class MessagesService:
         self,
         metadata: dict[str, Any],
     ) -> bool:
+
+        tags = metadata.get("tags", [])
+
+        if "rag_query_rewrite" in tags:
+            return False
+
         node_name = metadata.get("langgraph_node")
 
         if node_name in USER_VISIBLE_NODES:
@@ -330,6 +336,26 @@ class MessagesService:
 
                 elif chunk["type"] == "updates":
                     update_data = chunk["data"]
+
+                    knowledge_update = update_data.get("knowledge_assistant")
+
+                    if knowledge_update:
+                        rag_sources = knowledge_update.get(
+                            "rag_sources",
+                            [],
+                        )
+
+                        if rag_sources:
+                            yield self._format_sse(
+                                event=ChatEventType.SOURCES.value,
+                                data={
+                                    "conversation_id": str(conversation_id),
+                                    "assistant_message_id": str(
+                                        assistant_message.message_id,
+                                    ),
+                                    "sources": rag_sources,
+                                },
+                            )
 
                     if "__interrupt__" in update_data:
                         interrupted = True

@@ -9,6 +9,7 @@ from app.ai.agents.commerce_agent import CommerceAgent
 from app.ai.graph.builder import build_chat_graph
 from app.ai.llm.factory import LLMFactory
 from app.ai.rag.embeddings import EmbeddingProvider
+from app.ai.rag.query_rewriter import ContextualQueryRewriter
 from app.ai.rag.service import RagService
 from app.ai.rag.vector_store import QdrantKnowledgeStore
 from app.ai.tools import create_all_tools
@@ -54,9 +55,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         vector_store.connect_existing()
 
+        query_rewriter = ContextualQueryRewriter(
+            model=model,
+        )
+
         rag_service = RagService(
             vector_store=vector_store,
             model=model,
+            query_rewriter=query_rewriter,
         )
 
         app.state.chat_graph = build_chat_graph(

@@ -40,6 +40,7 @@ class KnowledgeBaseLoader:
                         encoding="utf-8",
                     ),
                     metadata={
+                        "document_id": path.stem,
                         "source": str(relative_path),
                         "document_type": document_type,
                         "category": category,

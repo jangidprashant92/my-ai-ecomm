@@ -67,3 +67,25 @@ class QdrantKnowledgeStore:
             query,
             k=k,
         )
+
+    def similarity_search_with_threshold(
+        self,
+        query: str,
+        k: int = 5,
+        score_threshold: float = 0.35,
+    ):
+        if self.vector_store is None:
+            raise RuntimeError(
+                "Qdrant vector store is not initialized. Call connect_existing() first."
+            )
+
+        results = self.vector_store.similarity_search_with_score(
+            query,
+            k=k,
+        )
+
+        return [
+            (document, score)
+            for document, score in results
+            if float(score) >= score_threshold
+        ]

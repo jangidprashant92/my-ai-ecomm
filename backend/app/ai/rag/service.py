@@ -1,8 +1,14 @@
+import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 
+from app.ai.rag.config import RagConfig
+from app.ai.rag.query_rewriter import ContextualQueryRewriter
 from app.ai.rag.vector_store import QdrantKnowledgeStore
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+
+logger = logging.getLogger(__name__)
 
 RAG_SYSTEM_PROMPT = """
 You are CommerceOps AI.
@@ -24,6 +30,13 @@ Rules:
    context does not explicitly describe that organization,
    say that the information is not available in the knowledge base.
 7. Do not claim that a business action was performed.
+8. Answer only the user's specific question.
+9. Do not include related policies unless they are necessary
+   to answer the question.
+10. If multiple policies are present in the context, use only
+    the policy relevant to the user's question.
+11. Do not compare different policy types unless the user
+    explicitly asks for a comparison.
 
 Return a concise, directly supported answer.
 """
@@ -45,38 +58,95 @@ class RagService:
         self,
         vector_store: QdrantKnowledgeStore,
         model: BaseChatModel,
+        query_rewriter: ContextualQueryRewriter,
+        config: RagConfig | None = None,
     ) -> None:
         self.vector_store = vector_store
         self.model = model
+        self.config = config or RagConfig()
+        self.query_rewriter = query_rewriter
 
     def retrieve(
         self,
-        query: str,
-        k: int = 4,
+        queries: Sequence[str],
     ) -> list[RetrievedDocument]:
-        results = self.vector_store.similarity_search_with_score(
-            query=query,
-            k=k,
+
+        unique_queries: list[str] = []
+
+        for query in queries:
+            normalized = query.strip()
+
+            if normalized and normalized not in unique_queries:
+                unique_queries.append(normalized)
+
+        retrieved: dict[tuple[str, str], RetrievedDocument] = {}
+
+        for query in unique_queries:
+            results = self.vector_store.similarity_search_with_threshold(
+                query=query,
+                k=self.config.top_k,
+                score_threshold=self.config.score_threshold,
+            )
+
+            for document, score in results:
+                source = str(
+                    document.metadata.get(
+                        "source",
+                        "",
+                    )
+                )
+
+                content = document.page_content
+
+                key = (
+                    source,
+                    content,
+                )
+
+                retrieved_document = RetrievedDocument(
+                    content=content,
+                    metadata=document.metadata,
+                    score=float(score),
+                )
+
+                existing = retrieved.get(key)
+
+                if existing is None or retrieved_document.score > existing.score:
+                    retrieved[key] = retrieved_document
+
+        documents = sorted(
+            retrieved.values(),
+            key=lambda document: document.score,
+            reverse=True,
         )
 
-        return [
-            RetrievedDocument(
-                content=document.page_content,
-                metadata=document.metadata,
-                score=float(score),
-            )
-            for document, score in results
-        ]
+        return documents[: self.config.max_context_documents]
 
     async def answer(
         self,
         query: str,
-        k: int = 4,
+        history: Sequence[BaseMessage] | None = None,
     ) -> tuple[str, list[RetrievedDocument]]:
+        history = history or []
+
+        retrieval_query = await self.query_rewriter.rewrite(
+            query=query,
+            history=history,
+        )
+
+        retrieval_queries = [
+            retrieval_query,
+            query,
+        ]
+
+        logger.info(
+            "RAG queries | original=%r | rewritten=%r",
+            query,
+            retrieval_query,
+        )
 
         documents = self.retrieve(
-            query=query,
-            k=k,
+            queries=retrieval_queries,
         )
 
         if not documents:

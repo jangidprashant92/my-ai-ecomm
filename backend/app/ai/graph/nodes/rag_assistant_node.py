@@ -16,11 +16,15 @@ class RagAssistantNode:
         state: ChatState,
     ) -> dict[str, Any]:
 
-        last_message = state["messages"][-1]
+        messages = state["messages"]
+
+        last_message = messages[-1]
+
+        history = messages[:-1]
 
         answer, documents = await self.rag_service.answer(
             query=str(last_message.content),
-            k=4,
+            history=history,
         )
 
         return {
@@ -32,7 +36,10 @@ class RagAssistantNode:
             ],
             "rag_sources": [
                 {
+                    "document_id": document.metadata.get("document_id"),
                     "source": document.metadata.get("source"),
+                    "document_type": document.metadata.get("document_type"),
+                    "category": document.metadata.get("category"),
                     "score": document.score,
                 }
                 for document in documents
