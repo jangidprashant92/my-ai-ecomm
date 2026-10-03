@@ -250,3 +250,78 @@ def abstention_quality(
             "correctly abstain."
         ),
     )
+
+
+@scorer
+def source_precision(
+    *,
+    outputs: Any | None,
+    expectations: dict[str, Any] | None,
+) -> Feedback:
+
+    if not isinstance(outputs, dict):
+        return Feedback(
+            value=0.0,
+            rationale="Prediction output is not a dictionary.",
+        )
+
+    if not isinstance(expectations, dict):
+        return Feedback(
+            value=0.0,
+            rationale="No evaluation expectations were provided.",
+        )
+
+    required_sources = set(
+        expectations.get(
+            "required_sources",
+            [],
+        )
+    )
+
+    actual_sources = {
+        source.get("source")
+        for source in outputs.get(
+            "sources",
+            [],
+        )
+        if isinstance(source, dict) and source.get("source")
+    }
+
+    if not actual_sources:
+        if not required_sources:
+            return Feedback(
+                value=1.0,
+                rationale=(
+                    "No documents were required and no documents were retrieved."
+                ),
+            )
+
+        return Feedback(
+            value=0.0,
+            rationale=("Required sources existed, but no documents were retrieved."),
+        )
+
+    if not required_sources:
+        return Feedback(
+            value=0.0,
+            rationale=(
+                f"No sources were expected, but {len(actual_sources)} "
+                "documents were retrieved."
+            ),
+        )
+
+    matched = required_sources.intersection(
+        actual_sources,
+    )
+
+    precision = len(matched) / len(actual_sources)
+
+    extra_sources = actual_sources - required_sources
+
+    return Feedback(
+        value=precision,
+        rationale=(
+            f"Matched sources: {sorted(matched)}. "
+            f"Extra sources: {sorted(extra_sources)}."
+        ),
+    )

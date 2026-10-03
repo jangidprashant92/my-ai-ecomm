@@ -9,6 +9,7 @@ from evaluation.rag.predictor import predict
 from evaluation.rag.scorers import (
     abstention_quality,
     rag_quality_judge,
+    source_precision,
     source_recall,
 )
 from mlflow.genai import evaluate
@@ -50,6 +51,7 @@ def main() -> None:
             predict_fn=predict,
             scorers=[
                 source_recall,
+                source_precision,
                 abstention_quality,
                 rag_quality_judge,
                 RetrievalRelevance(
@@ -82,6 +84,7 @@ def main() -> None:
             "retrieval_groundedness/value",
             "retrieval_sufficiency/value",
             "correctness/value",
+            "source_precision/value",
         ]
 
         available_columns = [

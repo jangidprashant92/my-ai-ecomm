@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -57,6 +56,24 @@ Important rules:
 
 10. If no candidate directly helps answer the question, return [].
 
+11. Prefer the smallest set of documents that is sufficient to answer
+    the user's question.
+
+12. Do not include multiple documents that provide the same fact unless
+    the additional document contains materially different information
+    required to answer the question.
+
+13. If one document completely answers a question, do not select another
+    document merely because it discusses the same topic.
+
+14. For comparison questions, select the documents representing each
+    policy or concept being compared, but do not include duplicate
+    supporting documents unless they add unique information.
+
+15. Relevance means both:
+    - the document is related to the question, and
+    - the document adds useful information to the final answer.
+
 Return the relevant document indices ordered from most relevant
 to least relevant.
 
@@ -96,25 +113,6 @@ Candidates:
 Return:
 [0, 1, 2]
 """
-
-
-class RankedDocument(BaseModel):
-    index: int = Field(description="Zero-based candidate document index.")
-
-    relevance: Literal[
-        "relevant",
-        "irrelevant",
-    ] = Field(
-        description=(
-            "Whether the document directly helps answer the user's specific question."
-        )
-    )
-
-    score: float = Field(
-        ge=0.0,
-        le=1.0,
-        description="Semantic relevance score between 0 and 1.",
-    )
 
 
 class RerankResponse(BaseModel):

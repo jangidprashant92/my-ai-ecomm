@@ -388,7 +388,7 @@ class RagService:
                             "document_type": document.metadata.get("document_type"),
                             "category": document.metadata.get("category"),
                             "vector_score": document.metadata.get("vector_score"),
-                            "rerank_score": document.metadata.get("rerank_score"),
+                            "rerank_rank": document.metadata.get("rerank_rank"),
                         },
                     }
                     for document in documents
