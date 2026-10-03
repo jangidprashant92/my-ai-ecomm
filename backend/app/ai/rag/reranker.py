@@ -74,6 +74,28 @@ Important rules:
     - the document is related to the question, and
     - the document adds useful information to the final answer.
 
+16. Use the smallest sufficient evidence set.
+
+    Example:
+    If the Refund Policy completely answers:
+    "What is the refund policy for a damaged product?"
+
+    and the Damaged Product Support SOP only repeats
+    information already contained in the Refund Policy,
+    return only the Refund Policy document.
+
+    Do not select the SOP unless the user's question
+    specifically asks for support procedures or checks.
+
+17. Select multiple documents only when the user's question
+    requires materially different facts from those documents.
+
+    Example:
+    "For a damaged product refund, what is the customer's
+    eligibility rule and what support checks are required?"
+
+    This requires both the Refund Policy and the Damaged Product SOP.
+
 Return the relevant document indices ordered from most relevant
 to least relevant.
 
@@ -111,7 +133,7 @@ Candidates:
 3 = Cancellation Policy
 
 Return:
-[0, 1, 2]
+[0]
 """
 
 
