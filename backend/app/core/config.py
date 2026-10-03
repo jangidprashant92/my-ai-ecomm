@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str
     OPENAI_API_KEY: str
     EMBEDDING_ENDPOINT: str
+    EVAL_JUDGE_MODEL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

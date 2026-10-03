@@ -1,0 +1,192 @@
+[
+  {
+    "id": "rag-001",
+    "category": "direct",
+    "inputs": {
+      "question": "What is the refund policy for a damaged product?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [
+        "A refund for a damaged product can be requested within 7 calendar days of delivery.",
+        "The customer must provide evidence of the damage.",
+        "Refunds above BRL 500 require manual approval."
+      ],
+      "expected_sources": [
+        "policies/refund_policy.md",
+        "support/damaged_product_sop.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-002",
+    "category": "follow_up",
+    "inputs": {
+      "question": "How long can I request it?",
+      "history": [
+        {
+          "role": "user",
+          "content": "What is the refund policy for a damaged product?"
+        },
+        {
+          "role": "assistant",
+          "content": "Customers can request a refund for a damaged product within 7 calendar days of delivery."
+        }
+      ]
+    },
+    "expectations": {
+      "expected_facts": [
+        "A refund for a damaged product can be requested within 7 calendar days of delivery."
+      ],
+      "expected_sources": [
+        "policies/refund_policy.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-003",
+    "category": "direct",
+    "inputs": {
+      "question": "What about standard returns?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [
+        "Eligible standard returns can be requested within 30 calendar days of delivery.",
+        "Products must be unused and returned in their original packaging unless the return is related to damage or a fulfillment error."
+      ],
+      "expected_sources": [
+        "policies/return_policy.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-004",
+    "category": "cross_policy",
+    "inputs": {
+      "question": "Does the 7-day rule also apply to standard returns?",
+      "history": [
+        {
+          "role": "user",
+          "content": "What is the refund policy for a damaged product?"
+        },
+        {
+          "role": "assistant",
+          "content": "Damaged-product refunds can be requested within 7 calendar days."
+        },
+        {
+          "role": "user",
+          "content": "What about standard returns?"
+        },
+        {
+          "role": "assistant",
+          "content": "Standard returns can be requested within 30 calendar days."
+        }
+      ]
+    },
+    "expectations": {
+      "expected_facts": [
+        "The 7-day period applies to damaged-product refunds.",
+        "Eligible standard returns can be requested within 30 calendar days of delivery."
+      ],
+      "expected_sources": [
+        "policies/refund_policy.md",
+        "policies/return_policy.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-005",
+    "category": "direct",
+    "inputs": {
+      "question": "Can I cancel an order after it has been handed to the carrier?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [
+        "An order cannot be cancelled after it has been handed to the carrier.",
+        "The customer must use the return process when eligible."
+      ],
+      "expected_sources": [
+        "policies/cancellation_policy.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-006",
+    "category": "direct",
+    "inputs": {
+      "question": "When should support be contacted for a delayed shipment?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [
+        "Customers should contact support when a shipment has not received a tracking update for more than 72 hours."
+      ],
+      "expected_sources": [
+        "policies/shipping_policy.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-007",
+    "category": "direct",
+    "inputs": {
+      "question": "Do refunds above BRL 500 require approval?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [
+        "Refunds above BRL 500 require manual approval."
+      ],
+      "expected_sources": [
+        "policies/refund_policy.md",
+        "support/damaged_product_sop.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-008",
+    "category": "direct",
+    "inputs": {
+      "question": "What evidence is required for a damaged product refund?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [
+        "The customer must provide evidence of the damage.",
+        "The support process requires verifying the order ID and delivered date."
+      ],
+      "expected_sources": [
+        "policies/refund_policy.md",
+        "support/damaged_product_sop.md"
+      ]
+    }
+  },
+  {
+    "id": "rag-009",
+    "category": "negative",
+    "inputs": {
+      "question": "What is the loyalty points policy?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [],
+      "expected_sources": [],
+      "answer_behavior": "The system should state that the knowledge base does not contain enough information."
+    }
+  },
+  {
+    "id": "rag-010",
+    "category": "negative",
+    "inputs": {
+      "question": "What is the international shipping policy?",
+      "history": []
+    },
+    "expectations": {
+      "expected_facts": [],
+      "expected_sources": [],
+      "answer_behavior": "The system should state that the knowledge base does not contain enough information."
+    }
+  }
+]
