@@ -72,62 +72,6 @@ class RagService:
             model=model,
         )
 
-    def retrieve(
-        self,
-        queries: Sequence[str],
-    ) -> list[RetrievedDocument]:
-
-        unique_queries: list[str] = []
-
-        for query in queries:
-            normalized = query.strip()
-
-            if normalized and normalized not in unique_queries:
-                unique_queries.append(normalized)
-
-        retrieved: dict[tuple[str, str], RetrievedDocument] = {}
-
-        for query in unique_queries:
-            results = self.vector_store.similarity_search_with_threshold(
-                query=query,
-                k=self.config.candidate_top_k,
-                score_threshold=self.config.score_threshold,
-            )
-
-            for document, score in results:
-                source = str(
-                    document.metadata.get(
-                        "source",
-                        "",
-                    )
-                )
-
-                content = document.page_content
-
-                key = (
-                    source,
-                    content,
-                )
-
-                retrieved_document = RetrievedDocument(
-                    content=content,
-                    metadata=document.metadata,
-                    score=float(score),
-                )
-
-                existing = retrieved.get(key)
-
-                if existing is None or retrieved_document.score > existing.score:
-                    retrieved[key] = retrieved_document
-
-        documents = sorted(
-            retrieved.values(),
-            key=lambda document: document.score,
-            reverse=True,
-        )
-
-        return documents[: self.config.max_context_documents]
-
     async def answer(
         self,
         query: str,
@@ -151,13 +95,9 @@ class RagService:
             retrieval_query,
         )
 
-        candidate_documents = self.retrieve_candidates(
+        documents = await self.aretrieve_documents(
             queries=retrieval_queries,
-        )
-
-        documents = await self.arerank_documents(
-            query=retrieval_query,
-            documents=candidate_documents,
+            rerank_query=retrieval_query,
         )
 
         if not documents:
@@ -213,13 +153,9 @@ class RagService:
             retrieval_query,
         )
 
-        candidate_documents = self.retrieve_candidates(
+        documents = self.retrieve_documents(
             queries=retrieval_queries,
-        )
-
-        documents = self.rerank_documents(
-            query=retrieval_query,
-            documents=candidate_documents,
+            rerank_query=retrieval_query,
         )
 
         if not documents:
@@ -384,6 +320,50 @@ class RagService:
         )
 
         documents = RagService.rerank_documents(
+            self,
+            query=rerank_query,
+            documents=candidate_documents,
+        )
+
+        span = mlflow.get_current_active_span()
+
+        if span is not None:
+            span.set_outputs(
+                [
+                    {
+                        "page_content": document.content,
+                        "metadata": {
+                            "doc_uri": document.metadata.get("source"),
+                            "document_id": document.metadata.get("document_id"),
+                            "document_type": document.metadata.get("document_type"),
+                            "category": document.metadata.get("category"),
+                            "vector_score": document.metadata.get("vector_score"),
+                            "rerank_score": document.metadata.get("rerank_score"),
+                        },
+                    }
+                    for document in documents
+                ]
+            )
+
+        return documents
+
+    @mlflow.trace(
+        name="rag_retrieval",
+        span_type=SpanType.RETRIEVER,
+    )
+    async def aretrieve_documents(
+        self,
+        *,
+        queries: Sequence[str],
+        rerank_query: str,
+    ) -> list[RetrievedDocument]:
+
+        candidate_documents = RagService.retrieve_candidates(
+            self,
+            queries=queries,
+        )
+
+        documents = await RagService.arerank_documents(
             self,
             query=rerank_query,
             documents=candidate_documents,
