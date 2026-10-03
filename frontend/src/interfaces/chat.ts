@@ -41,7 +41,16 @@ export interface IRawBackendMessage {
   role: "user" | "assistant" | "system";
   content: string | ThreadMessageLike["content"];
   status?: BackendMessageStatus | null;
+  rag_sources?: RagSource[];
   created_at?: string;
+}
+
+export interface RagSource {
+  document_id?: string | null;
+  source: string;
+  document_type?: string | null;
+  category?: string | null;
+  score?: number | null;
 }
 
 export interface IMessage extends ThreadMessageLike {
@@ -50,6 +59,7 @@ export interface IMessage extends ThreadMessageLike {
   parent_message_id?: string | null;
 
   hitl?: HumanReviewPayload;
+  ragSources?: RagSource[];
 }
 
 export type { TextMessagePart };

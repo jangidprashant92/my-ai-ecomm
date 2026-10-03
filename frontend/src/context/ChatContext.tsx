@@ -134,6 +134,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               content: normalizeContent(msg.content),
               createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
 
+              ragSources: msg.rag_sources ?? [],
+
               ...(msg.role === "assistant" && msg.status
                 ? {
                     status: isPendingHumanReview
@@ -145,12 +147,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                           type: msg.status.type,
                           reason: msg.status.reason ?? "stop",
                         },
-                  }
-                : {}),
-
-              ...(isPendingHumanReview && msg.status?.interrupt
-                ? {
-                    hitl: msg.status.interrupt,
                   }
                 : {}),
             };
@@ -379,6 +375,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content: [{ type: "text", text: "" }],
         createdAt: now,
         status: { type: "running" },
+        ragSources: [],
       };
 
       const controller = new AbortController();
@@ -541,6 +538,25 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               );
 
               setIsRunning(false);
+
+              return;
+            }
+
+            if (event === "sources") {
+              const assistantId = String(data.assistant_message_id);
+
+              const sources = Array.isArray(data.sources) ? data.sources : [];
+
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === assistantId
+                    ? {
+                        ...msg,
+                        ragSources: sources,
+                      }
+                    : msg,
+                ),
+              );
 
               return;
             }

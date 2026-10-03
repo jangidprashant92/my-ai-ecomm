@@ -66,6 +66,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { HumanReviewCard } from "../human-review-card";
+import { RagSourceCard } from "../rag-source-card";
 
 export type ThreadGroupPart = MessagePrimitive.GroupedParts.GroupPart;
 
@@ -490,6 +491,11 @@ const AssistantMessage: FC = () => {
             }
           }}
         </MessagePrimitive.GroupedParts>
+
+        {currentMessage?.ragSources && currentMessage.ragSources.length > 0 && (
+          <RagSourceCard sources={currentMessage.ragSources} />
+        )}
+
         {currentMessage?.hitl && (
           <HumanReviewCard
             messageId={currentMessage.message_id}
