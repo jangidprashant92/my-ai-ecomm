@@ -107,15 +107,45 @@ class QdrantKnowledgeStore:
             if float(score) >= score_threshold
         ]
 
-        return {
-            "query": query,
-            "documents": [
-                {
-                    "content": document.page_content,
-                    "source": document.metadata.get("source"),
-                    "score": score,
-                }
-                for document, score in filtered
-            ],
-            "results": filtered,
-        }
+        # ---------------------------------------------
+        # MLflow RETRIEVER span output
+        #
+        # MLflow expects retrieved documents to be
+        # represented as a list of document objects.
+        # ---------------------------------------------
+
+        span = mlflow.get_current_active_span()
+
+        if span is not None:
+            span.set_outputs(
+                [
+                    {
+                        "page_content": document.page_content,
+                        "metadata": {
+                            "doc_uri": document.metadata.get(
+                                "source",
+                            ),
+                            "document_id": document.metadata.get(
+                                "document_id",
+                            ),
+                            "document_type": document.metadata.get(
+                                "document_type",
+                            ),
+                            "category": document.metadata.get(
+                                "category",
+                            ),
+                            "score": score,
+                        },
+                    }
+                    for document, score in filtered
+                ]
+            )
+
+        # ---------------------------------------------
+        # Preserve the existing application contract.
+        #
+        # RagService expects:
+        # [(Document, score), ...]
+        # ---------------------------------------------
+
+        return filtered
