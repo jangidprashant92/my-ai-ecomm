@@ -10,52 +10,91 @@ from pydantic import BaseModel, Field
 RERANK_SYSTEM_PROMPT = """
 You are a document reranker for a CommerceOps knowledge base.
 
-Your job is to determine which candidate documents are relevant
-to the user's SPECIFIC question.
+Your job is to select the candidate documents that are directly
+useful for answering the user's SPECIFIC question.
 
 Important rules:
 
 1. Judge semantic relevance, not just keyword overlap.
 
-2. A document is relevant only if it directly helps answer the
+2. Select a document only when it materially helps answer the
    user's specific question.
 
-3. A document about a related policy is NOT relevant unless it
+3. A document about a related policy is not relevant unless it
    directly contributes to answering the question.
 
-4. When the question contains a specific qualifier such as:
+4. Pay attention to scope-changing qualifiers such as:
    - international
+   - domestic
    - damaged
-   - standard
    - cancelled
    - delayed
-   - refund
-   - return
+   - subscription
+   - premium
+   - enterprise
 
-   the document must explicitly cover that qualifier to be
-   considered relevant.
+5. A generic qualifier such as "standard", "general", "normal",
+   or "basic" does not require an exact textual match when the
+   document is clearly the canonical policy describing the
+   normal or baseline behavior.
 
-5. Do not infer missing policy scope.
+6. Do not infer a special policy from a generic policy.
 
    Example:
-   A general shipping policy is NOT sufficient for a question
-   about international shipping unless the document explicitly
-   discusses international shipping.
+   A general shipping policy is NOT relevant to a question about
+   international shipping unless the document explicitly discusses
+   international shipping.
 
-6. For unanswerable questions, unrelated documents should be
-   classified as irrelevant.
+7. A canonical policy document is relevant when it directly
+   describes the normal conditions of the policy being asked about,
+   even if words such as "standard" or "general" do not appear
+   verbatim.
 
-7. Every candidate document must appear exactly once in the result.
+8. Include every candidate that materially contributes to answering
+   the question.
 
-8. Scores must be between 0 and 1.
+9. Do not include documents that are merely related by topic.
 
-Scoring:
+10. If no candidate directly helps answer the question, return [].
 
-1.0 = directly answers the question
-0.8 = strongly relevant
-0.6 = partially relevant
-0.3 = weakly related
-0.0 = irrelevant
+Return the relevant document indices ordered from most relevant
+to least relevant.
+
+Examples:
+
+Question:
+"What are the standard return conditions?"
+
+Candidates:
+0 = Return Policy
+1 = Refund Policy
+2 = Cancellation Policy
+
+Return:
+[0]
+
+Question:
+"What is the international shipping policy?"
+
+Candidates:
+0 = General Shipping Policy
+1 = Return Policy
+2 = Refund Policy
+
+Return:
+[]
+
+Question:
+"What is the refund policy for a damaged product?"
+
+Candidates:
+0 = Refund Policy
+1 = Damaged Product Support SOP
+2 = Return Policy
+3 = Cancellation Policy
+
+Return:
+[0, 1, 2]
 """
 
 
@@ -79,7 +118,13 @@ class RankedDocument(BaseModel):
 
 
 class RerankResponse(BaseModel):
-    results: list[RankedDocument]
+    relevant_indices: list[int] = Field(
+        description=(
+            "Zero-based indices of documents that are directly relevant "
+            "to the user's question, ordered from most relevant to least relevant. "
+            "Return an empty list when no candidate is relevant."
+        )
+    )
 
 
 class LLMDocumentReRanker:
@@ -91,6 +136,8 @@ class LLMDocumentReRanker:
     ) -> None:
         self.model = model.with_structured_output(
             RerankResponse,
+            method="json_schema",
+            strict=True,
         )
 
     def _build_candidates(
@@ -107,55 +154,23 @@ class LLMDocumentReRanker:
         )
 
     @staticmethod
-    def _normalize_rankings(
+    def _normalize_indices(
         response: RerankResponse,
         document_count: int,
-    ) -> list[tuple[int, str, float]]:
-        """
-        Convert the structured LLM response into:
+    ) -> list[int]:
 
-            (index, relevance, score)
+        seen: set[int] = set()
+        normalized: list[int] = []
 
-        Every candidate is guaranteed to appear exactly once.
-        Missing candidates are treated as irrelevant with score 0.
-        """
-
-        rankings: dict[int, tuple[str, float]] = {}
-
-        for item in response.results:
-            if not 0 <= item.index < document_count:
+        for index in response.relevant_indices:
+            if not 0 <= index < document_count:
                 continue
 
-            # Guard against duplicate indexes from the model.
-            if item.index in rankings:
+            if index in seen:
                 continue
 
-            rankings[item.index] = (
-                item.relevance,
-                float(item.score),
-            )
-
-        normalized: list[tuple[int, str, float]] = []
-
-        for index in range(document_count):
-            relevance, score = rankings.get(
-                index,
-                ("irrelevant", 0.0),
-            )
-
-            normalized.append(
-                (
-                    index,
-                    relevance,
-                    score,
-                )
-            )
-
-        # Highest relevance score first.
-        normalized.sort(
-            key=lambda item: item[2],
-            reverse=True,
-        )
+            seen.add(index)
+            normalized.append(index)
 
         return normalized
 
@@ -163,13 +178,14 @@ class LLMDocumentReRanker:
         self,
         query: str,
         documents: Sequence,
-    ) -> list[tuple[int, str, float]]:
-        """Synchronous reranking."""
+    ) -> list[int]:
 
         if not documents:
             return []
 
-        candidates = self._build_candidates(documents)
+        candidates = self._build_candidates(
+            documents,
+        )
 
         response = self.model.invoke(
             [
@@ -184,7 +200,7 @@ class LLMDocumentReRanker:
             ],
         )
 
-        return self._normalize_rankings(
+        return self._normalize_indices(
             response=response,
             document_count=len(documents),
         )
@@ -193,13 +209,14 @@ class LLMDocumentReRanker:
         self,
         query: str,
         documents: Sequence,
-    ) -> list[tuple[int, str, float]]:
-        """Asynchronous reranking."""
+    ) -> list[int]:
 
         if not documents:
             return []
 
-        candidates = self._build_candidates(documents)
+        candidates = self._build_candidates(
+            documents,
+        )
 
         response = await self.model.ainvoke(
             [
@@ -214,7 +231,7 @@ class LLMDocumentReRanker:
             ],
         )
 
-        return self._normalize_rankings(
+        return self._normalize_indices(
             response=response,
             document_count=len(documents),
         )

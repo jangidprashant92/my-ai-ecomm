@@ -249,17 +249,14 @@ class RagService:
         documents: Sequence[RetrievedDocument],
     ) -> list[RetrievedDocument]:
 
-        ranked = self.reranker.rerank(
+        ranked_indices = self.reranker.rerank(
             query=query,
             documents=documents,
         )
 
         reranked_documents: list[RetrievedDocument] = []
 
-        for index, relevance, rerank_score in ranked:
-            # Ignore documents that the reranker marked irrelevant.
-            if relevance != "relevant":
-                continue
+        for rank, index in enumerate(ranked_indices):
             document = documents[index]
 
             reranked_documents.append(
@@ -268,17 +265,16 @@ class RagService:
                     metadata={
                         **document.metadata,
                         "vector_score": document.score,
-                        "rerank_score": rerank_score,
-                        "rerank_relevance": relevance,
+                        "rerank_rank": rank + 1,
                     },
-                    score=rerank_score,
+                    score=document.score,
                 )
             )
-            # Stop once we have enough final context documents.
+
             if len(reranked_documents) >= self.config.max_context_documents:
                 break
 
-        return reranked_documents[: self.config.max_context_documents]
+        return reranked_documents
 
     async def arerank_documents(
         self,
@@ -286,18 +282,14 @@ class RagService:
         documents: Sequence[RetrievedDocument],
     ) -> list[RetrievedDocument]:
 
-        ranked = await self.reranker.arerank(
+        ranked_indices = await self.reranker.arerank(
             query=query,
             documents=documents,
         )
 
         reranked_documents: list[RetrievedDocument] = []
 
-        for index, relevance, rerank_score in ranked:
-            # Ignore documents that the reranker marked irrelevant.
-            if relevance != "relevant":
-                continue
-
+        for rank, index in enumerate(ranked_indices):
             document = documents[index]
 
             reranked_documents.append(
@@ -306,18 +298,16 @@ class RagService:
                     metadata={
                         **document.metadata,
                         "vector_score": document.score,
-                        "rerank_score": rerank_score,
-                        "rerank_relevance": relevance,
+                        "rerank_rank": rank + 1,
                     },
-                    score=rerank_score,
+                    score=document.score,
                 )
             )
 
-            # Stop once we have enough final context documents.
             if len(reranked_documents) >= self.config.max_context_documents:
                 break
 
-        return reranked_documents[: self.config.max_context_documents]
+        return reranked_documents
 
     @mlflow.trace(
         name="rag_retrieval",
@@ -354,10 +344,7 @@ class RagService:
                             "document_type": document.metadata.get("document_type"),
                             "category": document.metadata.get("category"),
                             "vector_score": document.metadata.get("vector_score"),
-                            "rerank_score": document.metadata.get("rerank_score"),
-                            "rerank_relevance": document.metadata.get(
-                                "rerank_relevance"
-                            ),
+                            "rerank_rank": document.metadata.get("rerank_rank"),
                         },
                     }
                     for document in documents
