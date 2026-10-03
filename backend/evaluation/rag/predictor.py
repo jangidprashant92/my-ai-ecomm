@@ -69,18 +69,16 @@ def build_history(
 
 
 @mlflow.trace(name="rag_evaluation")
-async def predict(
+def predict(
     question: str,
     history: Sequence[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
 
-    # Create model/client resources inside the current
-    # evaluation execution context.
     rag_service = build_rag_service()
 
     conversation_history = build_history(history)
 
-    answer, documents = await rag_service.answer(
+    answer, documents = rag_service.answer_sync(
         query=question,
         history=conversation_history,
     )

@@ -4,12 +4,18 @@ import json
 from pathlib import Path
 
 import mlflow
+from app.core.config import settings
 from evaluation.rag.predictor import predict
 from evaluation.rag.scorers import (
     rag_quality_judge,
     source_recall,
 )
 from mlflow.genai import evaluate
+from mlflow.genai.scorers import (
+    RetrievalGroundedness,
+    RetrievalRelevance,
+    RetrievalSufficiency,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATASET_PATH = BASE_DIR / "dataset.json"
@@ -43,23 +49,32 @@ def main() -> None:
             scorers=[
                 source_recall,
                 rag_quality_judge,
+                RetrievalRelevance(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
+                RetrievalGroundedness(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
+                RetrievalSufficiency(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
             ],
         )
 
         print("\nEvaluation complete.")
         print(results)
 
-        print("\nPer-row evaluation results:")
-
+        print("\nResult DataFrame columns:")
         print(
-            results.result_df[
-                [
-                    "inputs",
-                    "outputs",
-                    "source_recall",
-                ]
-            ].to_string(index=False)
+            results.result_df.columns.tolist(),
         )
+
+        # print("\nPer-row evaluation results:")
+        # print(
+        #     results.result_df.to_string(
+        #         index=False,
+        #     )
+        # )
 
 
 if __name__ == "__main__":

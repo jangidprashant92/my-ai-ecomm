@@ -177,3 +177,60 @@ class RagService:
             str(response.content),
             documents,
         )
+
+    def answer_sync(
+        self,
+        query: str,
+        history: Sequence[BaseMessage] | None = None,
+    ) -> tuple[str, list[RetrievedDocument]]:
+
+        history = history or []
+
+        retrieval_query = self.query_rewriter.rewrite_sync(
+            query=query,
+            history=history,
+        )
+
+        retrieval_queries = [
+            retrieval_query,
+            query,
+        ]
+
+        logger.info(
+            "RAG evaluation queries | original=%r | rewritten=%r",
+            query,
+            retrieval_query,
+        )
+
+        documents = self.retrieve(
+            queries=retrieval_queries,
+        )
+
+        if not documents:
+            return (
+                "I could not find relevant information in the knowledge base.",
+                [],
+            )
+
+        context = "\n\n---\n\n".join(
+            (f"Source: {doc.metadata.get('source')}\n{doc.content}")
+            for doc in documents
+        )
+
+        response = self.model.invoke(
+            [
+                SystemMessage(
+                    content=RAG_SYSTEM_PROMPT,
+                ),
+                HumanMessage(
+                    content=(
+                        f"Question:\n{query}\n\nKnowledge Base Context:\n{context}"
+                    ),
+                ),
+            ],
+        )
+
+        return (
+            str(response.content),
+            documents,
+        )

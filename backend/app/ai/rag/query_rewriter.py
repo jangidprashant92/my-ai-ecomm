@@ -122,6 +122,43 @@ class ContextualQueryRewriter:
 
         return rewritten_query or query
 
+    def rewrite_sync(
+        self,
+        query: str,
+        history: Sequence[BaseMessage],
+    ) -> str:
+
+        if not history:
+            return query
+
+        conversation = self._format_history(
+            history=history,
+        )
+
+        response = self.model.invoke(
+            [
+                SystemMessage(
+                    content=QUERY_REWRITE_PROMPT,
+                ),
+                HumanMessage(
+                    content=(
+                        f"Conversation History:\n"
+                        f"{conversation}\n\n"
+                        f"Latest User Question:\n"
+                        f"{query}"
+                    ),
+                ),
+            ],
+            config={
+                "tags": ["rag_query_rewrite"],
+                "run_name": "rag_query_rewrite",
+            },
+        )
+
+        rewritten_query = self._extract_text(response)
+
+        return rewritten_query or query
+
     def _format_history(
         self,
         history: Sequence[BaseMessage],

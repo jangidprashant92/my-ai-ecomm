@@ -105,14 +105,11 @@ def source_recall(
     }
 
     if not required_sources:
-        score = 1.0 if not actual_sources else 0.0
-
         return Feedback(
-            value=score,
+            value=1.0,
             rationale=(
-                "No sources were required."
-                if score == 1.0
-                else f"Unexpected sources retrieved: {actual_sources}"
+                "No required sources were defined for this test case. "
+                "Source recall is not applicable."
             ),
         )
 

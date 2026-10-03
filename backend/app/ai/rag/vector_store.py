@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+import mlflow
 from app.core.config import settings
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_qdrant import QdrantVectorStore
+from mlflow.entities import SpanType
 from qdrant_client import QdrantClient
 
 
@@ -19,12 +21,11 @@ class QdrantKnowledgeStore:
     ) -> None:
         self.embeddings = embeddings
         self.collection_name = collection_name or settings.QDRANT_COLLECTION
+        self.vector_store: QdrantVectorStore | None = None
 
         self.client = QdrantClient(
             url=settings.QDRANT_URL,
         )
-
-        self.vector_store: QdrantVectorStore | None = None
 
     def recreate_from_documents(
         self,
@@ -74,6 +75,22 @@ class QdrantKnowledgeStore:
         k: int = 5,
         score_threshold: float = 0.35,
     ):
+        return self.search_with_threshold(
+            query=query,
+            k=k,
+            score_threshold=score_threshold,
+        )
+
+    @mlflow.trace(
+        name="qdrant_retrieval",
+        span_type=SpanType.RETRIEVER,
+    )
+    def search_with_threshold(
+        self,
+        query: str,
+        k: int = 5,
+        score_threshold: float = 0.35,
+    ):
         if self.vector_store is None:
             raise RuntimeError(
                 "Qdrant vector store is not initialized. Call connect_existing() first."
@@ -84,8 +101,21 @@ class QdrantKnowledgeStore:
             k=k,
         )
 
-        return [
-            (document, score)
+        filtered = [
+            (document, float(score))
             for document, score in results
             if float(score) >= score_threshold
         ]
+
+        return {
+            "query": query,
+            "documents": [
+                {
+                    "content": document.page_content,
+                    "source": document.metadata.get("source"),
+                    "score": score,
+                }
+                for document, score in filtered
+            ],
+            "results": filtered,
+        }
