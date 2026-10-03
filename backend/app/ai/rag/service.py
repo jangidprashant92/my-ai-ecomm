@@ -2,11 +2,14 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+import mlflow
 from app.ai.rag.config import RagConfig
 from app.ai.rag.query_rewriter import ContextualQueryRewriter
+from app.ai.rag.reranker import LLMDocumentReRanker
 from app.ai.rag.vector_store import QdrantKnowledgeStore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from mlflow.entities import SpanType
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +68,9 @@ class RagService:
         self.model = model
         self.config = config or RagConfig()
         self.query_rewriter = query_rewriter
+        self.reranker = LLMDocumentReRanker(
+            model=model,
+        )
 
     def retrieve(
         self,
@@ -84,7 +90,7 @@ class RagService:
         for query in unique_queries:
             results = self.vector_store.similarity_search_with_threshold(
                 query=query,
-                k=self.config.top_k,
+                k=self.config.candidate_top_k,
                 score_threshold=self.config.score_threshold,
             )
 
@@ -145,8 +151,13 @@ class RagService:
             retrieval_query,
         )
 
-        documents = self.retrieve(
+        candidate_documents = self.retrieve_candidates(
             queries=retrieval_queries,
+        )
+
+        documents = await self.arerank_documents(
+            query=retrieval_query,
+            documents=candidate_documents,
         )
 
         if not documents:
@@ -202,8 +213,13 @@ class RagService:
             retrieval_query,
         )
 
-        documents = self.retrieve(
+        candidate_documents = self.retrieve_candidates(
             queries=retrieval_queries,
+        )
+
+        documents = self.rerank_documents(
+            query=retrieval_query,
+            documents=candidate_documents,
         )
 
         if not documents:
@@ -234,3 +250,163 @@ class RagService:
             str(response.content),
             documents,
         )
+
+    def retrieve_candidates(
+        self,
+        queries: Sequence[str],
+    ) -> list[RetrievedDocument]:
+
+        unique_queries: list[str] = []
+
+        for query in queries:
+            normalized = query.strip()
+
+            if normalized and normalized not in unique_queries:
+                unique_queries.append(normalized)
+
+        retrieved: dict[tuple[str, str], RetrievedDocument] = {}
+
+        for query in unique_queries:
+            results = self.vector_store.similarity_search_with_threshold(
+                query=query,
+                k=self.config.candidate_top_k,
+                score_threshold=self.config.score_threshold,
+            )
+
+            for document, score in results:
+                source = str(
+                    document.metadata.get(
+                        "source",
+                        "",
+                    )
+                )
+
+                content = document.page_content
+
+                key = (
+                    source,
+                    content,
+                )
+
+                retrieved_document = RetrievedDocument(
+                    content=content,
+                    metadata=document.metadata,
+                    score=float(score),
+                )
+
+                existing = retrieved.get(key)
+
+                if existing is None or retrieved_document.score > existing.score:
+                    retrieved[key] = retrieved_document
+
+        documents = sorted(
+            retrieved.values(),
+            key=lambda document: document.score,
+            reverse=True,
+        )
+
+        return documents[: self.config.max_rerank_documents]
+
+    def rerank_documents(
+        self,
+        query: str,
+        documents: Sequence[RetrievedDocument],
+    ) -> list[RetrievedDocument]:
+
+        ranked = self.reranker.rerank(
+            query=query,
+            documents=documents,
+        )
+
+        reranked_documents: list[RetrievedDocument] = []
+
+        for index, rerank_score in ranked:
+            document = documents[index]
+
+            reranked_documents.append(
+                RetrievedDocument(
+                    content=document.content,
+                    metadata={
+                        **document.metadata,
+                        "vector_score": document.score,
+                        "rerank_score": rerank_score,
+                    },
+                    score=rerank_score,
+                )
+            )
+
+        return reranked_documents[: self.config.max_context_documents]
+
+    async def arerank_documents(
+        self,
+        query: str,
+        documents: Sequence[RetrievedDocument],
+    ) -> list[RetrievedDocument]:
+
+        ranked = await self.reranker.arerank(
+            query=query,
+            documents=documents,
+        )
+
+        reranked_documents: list[RetrievedDocument] = []
+
+        for index, rerank_score in ranked:
+            document = documents[index]
+
+            reranked_documents.append(
+                RetrievedDocument(
+                    content=document.content,
+                    metadata={
+                        **document.metadata,
+                        "vector_score": document.score,
+                        "rerank_score": rerank_score,
+                    },
+                    score=rerank_score,
+                )
+            )
+
+        return reranked_documents[: self.config.max_context_documents]
+
+    @mlflow.trace(
+        name="rag_retrieval",
+        span_type=SpanType.RETRIEVER,
+    )
+    def retrieve_documents(
+        self,
+        *,
+        queries: Sequence[str],
+        rerank_query: str,
+    ) -> list[RetrievedDocument]:
+
+        candidate_documents = RagService.retrieve_candidates(
+            self,
+            queries=queries,
+        )
+
+        documents = RagService.rerank_documents(
+            self,
+            query=rerank_query,
+            documents=candidate_documents,
+        )
+
+        span = mlflow.get_current_active_span()
+
+        if span is not None:
+            span.set_outputs(
+                [
+                    {
+                        "page_content": document.content,
+                        "metadata": {
+                            "doc_uri": document.metadata.get("source"),
+                            "document_id": document.metadata.get("document_id"),
+                            "document_type": document.metadata.get("document_type"),
+                            "category": document.metadata.get("category"),
+                            "vector_score": document.metadata.get("vector_score"),
+                            "rerank_score": document.metadata.get("rerank_score"),
+                        },
+                    }
+                    for document in documents
+                ]
+            )
+
+        return documents

@@ -146,23 +146,22 @@
     }
   },
   {
-    "id": "rag-008",
-    "category": "direct",
-    "inputs": {
-      "question": "What evidence is required for a damaged product refund?",
-      "history": []
-    },
-    "expectations": {
-      "expected_facts": [
-        "The customer must provide evidence of the damage.",
-        "The support process requires verifying the order ID and delivered date."
-      ],
-      "required_sources": [
-        "policies/refund_policy.md",
-        "support/damaged_product_sop.md"
-      ]
-    }
+  "id": "rag-008",
+  "category": "direct",
+  "inputs": {
+    "question": "What evidence is required for a damaged product refund?",
+    "history": []
   },
+  "expectations": {
+    "expected_facts": [
+      "The customer must provide evidence of the damage."
+    ],
+    "required_sources": [
+      "policies/refund_policy.md",
+      "support/damaged_product_sop.md"
+    ]
+  }
+},
   {
     "id": "rag-009",
     "category": "negative",

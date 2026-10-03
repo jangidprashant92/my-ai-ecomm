@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-import mlflow
 from app.core.config import settings
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_qdrant import QdrantVectorStore
-from mlflow.entities import SpanType
 from qdrant_client import QdrantClient
 
 
@@ -81,10 +79,6 @@ class QdrantKnowledgeStore:
             score_threshold=score_threshold,
         )
 
-    @mlflow.trace(
-        name="qdrant_retrieval",
-        span_type=SpanType.RETRIEVER,
-    )
     def search_with_threshold(
         self,
         query: str,
@@ -106,40 +100,6 @@ class QdrantKnowledgeStore:
             for document, score in results
             if float(score) >= score_threshold
         ]
-
-        # ---------------------------------------------
-        # MLflow RETRIEVER span output
-        #
-        # MLflow expects retrieved documents to be
-        # represented as a list of document objects.
-        # ---------------------------------------------
-
-        span = mlflow.get_current_active_span()
-
-        if span is not None:
-            span.set_outputs(
-                [
-                    {
-                        "page_content": document.page_content,
-                        "metadata": {
-                            "doc_uri": document.metadata.get(
-                                "source",
-                            ),
-                            "document_id": document.metadata.get(
-                                "document_id",
-                            ),
-                            "document_type": document.metadata.get(
-                                "document_type",
-                            ),
-                            "category": document.metadata.get(
-                                "category",
-                            ),
-                            "score": score,
-                        },
-                    }
-                    for document, score in filtered
-                ]
-            )
 
         # ---------------------------------------------
         # Preserve the existing application contract.

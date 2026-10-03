@@ -7,6 +7,7 @@ import mlflow
 from app.core.config import settings
 from evaluation.rag.predictor import predict
 from evaluation.rag.scorers import (
+    abstention_quality,
     rag_quality_judge,
     source_recall,
 )
@@ -49,6 +50,7 @@ def main() -> None:
             predict_fn=predict,
             scorers=[
                 source_recall,
+                abstention_quality,
                 rag_quality_judge,
                 RetrievalRelevance(
                     model=settings.EVAL_JUDGE_MODEL,
@@ -73,11 +75,13 @@ def main() -> None:
         columns = [
             "trace_id",
             "source_recall/value",
+            "abstention_quality/value",
             "commerceops_rag_quality/value",
             "retrieval_relevance/value",
             "retrieval_relevance/precision/value",
             "retrieval_groundedness/value",
             "retrieval_sufficiency/value",
+            "correctness/value",
         ]
 
         available_columns = [

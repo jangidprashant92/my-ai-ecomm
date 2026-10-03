@@ -157,3 +157,96 @@ def rag_quality_score(
             "separately by the LLM judge."
         ),
     )
+
+
+@scorer
+def abstention_quality(
+    *,
+    outputs: Any | None,
+    expectations: dict[str, Any] | None,
+) -> Feedback:
+
+    if not isinstance(outputs, dict):
+        return Feedback(
+            value="FAIL",
+            rationale="Prediction output is not a dictionary.",
+        )
+
+    if not isinstance(expectations, dict):
+        return Feedback(
+            value="FAIL",
+            rationale="No evaluation expectations were provided.",
+        )
+
+    expected_facts = expectations.get(
+        "expected_facts",
+        [],
+    )
+
+    required_sources = expectations.get(
+        "required_sources",
+        [],
+    )
+
+    # This scorer is only meaningful for negative / unanswerable cases.
+    if expected_facts or required_sources:
+        return Feedback(
+            value="N/A",
+            rationale=(
+                "This is an answerable test case. Abstention quality is not applicable."
+            ),
+        )
+
+    sources = outputs.get(
+        "sources",
+        [],
+    )
+
+    answer = (
+        str(
+            outputs.get(
+                "answer",
+                "",
+            )
+        )
+        .strip()
+        .lower()
+    )
+
+    abstention_phrases = (
+        "could not find relevant information",
+        "does not contain enough information",
+        "not available in the knowledge base",
+        "not found in the knowledge base",
+        "knowledge base does not contain",
+    )
+
+    correctly_abstained = any(phrase in answer for phrase in abstention_phrases)
+
+    no_sources_retrieved = not sources
+
+    if no_sources_retrieved and correctly_abstained:
+        return Feedback(
+            value="PASS",
+            rationale=(
+                "No documents were retrieved and the assistant correctly "
+                "stated that the knowledge base does not contain enough information."
+            ),
+        )
+
+    if sources and correctly_abstained:
+        return Feedback(
+            value="FAIL",
+            rationale=(
+                "The assistant correctly abstained, but the retriever returned "
+                "documents for an unanswerable question. Retrieval abstention failed."
+            ),
+        )
+
+    return Feedback(
+        value="FAIL",
+        rationale=(
+            "The test case is unanswerable, but the assistant did not "
+            "correctly abstain."
+        ),
+    )
