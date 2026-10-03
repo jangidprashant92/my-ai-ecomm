@@ -88,9 +88,9 @@ def source_recall(
             rationale="No evaluation expectations were provided.",
         )
 
-    expected_sources = set(
+    required_sources = set(
         expectations.get(
-            "expected_sources",
+            "required_sources",
             [],
         )
     )
@@ -104,25 +104,25 @@ def source_recall(
         if isinstance(source, dict) and source.get("source")
     }
 
-    if not expected_sources:
+    if not required_sources:
         score = 1.0 if not actual_sources else 0.0
 
         return Feedback(
             value=score,
             rationale=(
-                "No sources were expected."
+                "No sources were required."
                 if score == 1.0
                 else f"Unexpected sources retrieved: {actual_sources}"
             ),
         )
 
-    matched = expected_sources.intersection(
+    matched = required_sources.intersection(
         actual_sources,
     )
 
-    score = len(matched) / len(expected_sources)
+    score = len(matched) / len(required_sources)
 
-    missing = expected_sources - actual_sources
+    missing = required_sources - actual_sources
 
     return Feedback(
         value=score,

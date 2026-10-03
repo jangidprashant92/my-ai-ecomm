@@ -12,7 +12,7 @@
         "The customer must provide evidence of the damage.",
         "Refunds above BRL 500 require manual approval."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/refund_policy.md",
         "support/damaged_product_sop.md"
       ]
@@ -38,28 +38,28 @@
       "expected_facts": [
         "A refund for a damaged product can be requested within 7 calendar days of delivery."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/refund_policy.md"
       ]
     }
   },
   {
-    "id": "rag-003",
-    "category": "direct",
-    "inputs": {
-      "question": "What about standard returns?",
-      "history": []
-    },
-    "expectations": {
-      "expected_facts": [
-        "Eligible standard returns can be requested within 30 calendar days of delivery.",
-        "Products must be unused and returned in their original packaging unless the return is related to damage or a fulfillment error."
-      ],
-      "expected_sources": [
-        "policies/return_policy.md"
-      ]
-    }
+  "id": "rag-003",
+  "category": "direct",
+  "inputs": {
+    "question": "What are the standard return conditions?",
+    "history": []
   },
+  "expectations": {
+    "expected_facts": [
+      "Eligible standard returns can be requested within 30 calendar days of delivery.",
+      "Products must be unused and returned in their original packaging unless the return is related to damage or a fulfillment error."
+    ],
+    "required_sources": [
+      "policies/return_policy.md"
+    ]
+  }
+},
   {
     "id": "rag-004",
     "category": "cross_policy",
@@ -89,7 +89,7 @@
         "The 7-day period applies to damaged-product refunds.",
         "Eligible standard returns can be requested within 30 calendar days of delivery."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/refund_policy.md",
         "policies/return_policy.md"
       ]
@@ -107,7 +107,7 @@
         "An order cannot be cancelled after it has been handed to the carrier.",
         "The customer must use the return process when eligible."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/cancellation_policy.md"
       ]
     }
@@ -123,7 +123,7 @@
       "expected_facts": [
         "Customers should contact support when a shipment has not received a tracking update for more than 72 hours."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/shipping_policy.md"
       ]
     }
@@ -139,7 +139,7 @@
       "expected_facts": [
         "Refunds above BRL 500 require manual approval."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/refund_policy.md",
         "support/damaged_product_sop.md"
       ]
@@ -157,7 +157,7 @@
         "The customer must provide evidence of the damage.",
         "The support process requires verifying the order ID and delivered date."
       ],
-      "expected_sources": [
+      "required_sources": [
         "policies/refund_policy.md",
         "support/damaged_product_sop.md"
       ]
@@ -172,7 +172,7 @@
     },
     "expectations": {
       "expected_facts": [],
-      "expected_sources": [],
+      "required_sources": [],
       "answer_behavior": "The system should state that the knowledge base does not contain enough information."
     }
   },
@@ -185,7 +185,7 @@
     },
     "expectations": {
       "expected_facts": [],
-      "expected_sources": [],
+      "required_sources": [],
       "answer_behavior": "The system should state that the knowledge base does not contain enough information."
     }
   }

@@ -49,6 +49,18 @@ def main() -> None:
         print("\nEvaluation complete.")
         print(results)
 
+        print("\nPer-row evaluation results:")
+
+        print(
+            results.result_df[
+                [
+                    "inputs",
+                    "outputs",
+                    "source_recall",
+                ]
+            ].to_string(index=False)
+        )
+
 
 if __name__ == "__main__":
     main()
