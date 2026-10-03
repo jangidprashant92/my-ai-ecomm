@@ -256,7 +256,10 @@ class RagService:
 
         reranked_documents: list[RetrievedDocument] = []
 
-        for index, rerank_score in ranked:
+        for index, relevance, rerank_score in ranked:
+            # Ignore documents that the reranker marked irrelevant.
+            if relevance != "relevant":
+                continue
             document = documents[index]
 
             reranked_documents.append(
@@ -266,10 +269,14 @@ class RagService:
                         **document.metadata,
                         "vector_score": document.score,
                         "rerank_score": rerank_score,
+                        "rerank_relevance": relevance,
                     },
                     score=rerank_score,
                 )
             )
+            # Stop once we have enough final context documents.
+            if len(reranked_documents) >= self.config.max_context_documents:
+                break
 
         return reranked_documents[: self.config.max_context_documents]
 
@@ -286,7 +293,11 @@ class RagService:
 
         reranked_documents: list[RetrievedDocument] = []
 
-        for index, rerank_score in ranked:
+        for index, relevance, rerank_score in ranked:
+            # Ignore documents that the reranker marked irrelevant.
+            if relevance != "relevant":
+                continue
+
             document = documents[index]
 
             reranked_documents.append(
@@ -296,10 +307,15 @@ class RagService:
                         **document.metadata,
                         "vector_score": document.score,
                         "rerank_score": rerank_score,
+                        "rerank_relevance": relevance,
                     },
                     score=rerank_score,
                 )
             )
+
+            # Stop once we have enough final context documents.
+            if len(reranked_documents) >= self.config.max_context_documents:
+                break
 
         return reranked_documents[: self.config.max_context_documents]
 
@@ -339,6 +355,9 @@ class RagService:
                             "category": document.metadata.get("category"),
                             "vector_score": document.metadata.get("vector_score"),
                             "rerank_score": document.metadata.get("rerank_score"),
+                            "rerank_relevance": document.metadata.get(
+                                "rerank_relevance"
+                            ),
                         },
                     }
                     for document in documents
