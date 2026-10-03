@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
+import mlflow
 from dotenv import load_dotenv
 
 load_dotenv()
-
-import asyncio
-from collections.abc import Sequence
-from typing import Any
 
 from app.ai.llm.factory import LLMFactory
 from app.ai.rag.embeddings import EmbeddingProvider
@@ -41,6 +41,7 @@ def build_rag_service() -> RagService:
 def build_history(
     history: Sequence[dict[str, str]] | None,
 ) -> list[HumanMessage | AIMessage]:
+
     if not history:
         return []
 
@@ -70,18 +71,17 @@ def build_history(
 rag_service = build_rag_service()
 
 
-def predict(
+@mlflow.trace(name="rag_evaluation")
+async def predict(
     question: str,
     history: Sequence[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
 
     conversation_history = build_history(history)
 
-    answer, documents = asyncio.run(
-        rag_service.answer(
-            query=question,
-            history=conversation_history,
-        )
+    answer, documents = await rag_service.answer(
+        query=question,
+        history=conversation_history,
     )
 
     sources = [

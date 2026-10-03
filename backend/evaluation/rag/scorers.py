@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from app.core.config import settings
+from mlflow.entities import Feedback
 from mlflow.genai import scorer
 from mlflow.genai.judges import make_judge
-
-EVAL_JUDGE_MODEL = "openai:/gpt-4.1-mini"
-
 
 rag_quality_judge = make_judge(
     name="commerceops_rag_quality",
@@ -58,7 +57,7 @@ PASS
 PARTIAL
 FAIL
 """,
-    model=EVAL_JUDGE_MODEL,
+    model=settings.EVAL_JUDGE_MODEL,
     feedback_value_type=Literal[
         "PASS",
         "PARTIAL",
@@ -69,9 +68,25 @@ FAIL
 
 @scorer
 def source_recall(
-    outputs: dict[str, Any],
-    expectations: dict[str, Any],
-) -> float:
+    *,
+    outputs: Any | None,
+    expectations: dict[str, Any] | None,
+) -> Feedback:
+
+    if not isinstance(outputs, dict):
+        return Feedback(
+            value=0.0,
+            rationale=(
+                "Prediction output is not a dictionary, "
+                "so retrieved sources could not be evaluated."
+            ),
+        )
+
+    if not isinstance(expectations, dict):
+        return Feedback(
+            value=0.0,
+            rationale="No evaluation expectations were provided.",
+        )
 
     expected_sources = set(
         expectations.get(
@@ -86,15 +101,32 @@ def source_recall(
             "sources",
             [],
         )
-        if source.get("source")
+        if isinstance(source, dict) and source.get("source")
     }
 
-    # No source is expected.
     if not expected_sources:
-        return 1.0 if not actual_sources else 0.0
+        score = 1.0 if not actual_sources else 0.0
+
+        return Feedback(
+            value=score,
+            rationale=(
+                "No sources were expected."
+                if score == 1.0
+                else f"Unexpected sources retrieved: {actual_sources}"
+            ),
+        )
 
     matched = expected_sources.intersection(
         actual_sources,
     )
 
-    return len(matched) / len(expected_sources)
+    score = len(matched) / len(expected_sources)
+
+    missing = expected_sources - actual_sources
+
+    return Feedback(
+        value=score,
+        rationale=(
+            f"Matched sources: {sorted(matched)}. Missing sources: {sorted(missing)}."
+        ),
+    )
