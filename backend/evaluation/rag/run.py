@@ -12,6 +12,7 @@ from evaluation.rag.scorers import (
 )
 from mlflow.genai import evaluate
 from mlflow.genai.scorers import (
+    Correctness,
     RetrievalGroundedness,
     RetrievalRelevance,
     RetrievalSufficiency,
@@ -58,23 +59,39 @@ def main() -> None:
                 RetrievalSufficiency(
                     model=settings.EVAL_JUDGE_MODEL,
                 ),
+                Correctness(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
             ],
         )
 
         print("\nEvaluation complete.")
         print(results)
 
-        print("\nResult DataFrame columns:")
-        print(
-            results.result_df.columns.tolist(),
-        )
+        print("\nPer-row evaluation results:")
 
-        # print("\nPer-row evaluation results:")
-        # print(
-        #     results.result_df.to_string(
-        #         index=False,
-        #     )
-        # )
+        columns = [
+            "trace_id",
+            "source_recall/value",
+            "commerceops_rag_quality/value",
+            "retrieval_relevance/value",
+            "retrieval_relevance/precision/value",
+            "retrieval_groundedness/value",
+            "retrieval_sufficiency/value",
+        ]
+
+        available_columns = [
+            column
+            for column in columns
+            if column in results.result_df.columns  # type: ignore
+        ]
+
+        print(results.result_df[available_columns].to_string(index=False))  # type: ignore
+
+        results.result_df.to_csv(
+            BASE_DIR / "results.csv",
+            index=False,
+        )
 
 
 if __name__ == "__main__":

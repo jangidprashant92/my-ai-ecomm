@@ -14,3 +14,5 @@ data/
 
 myagenticai.*
 mlartifacts/*
+
+evaluation/rag/*.csv

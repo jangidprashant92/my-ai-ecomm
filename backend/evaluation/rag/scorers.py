@@ -127,3 +127,33 @@ def source_recall(
             f"Matched sources: {sorted(matched)}. Missing sources: {sorted(missing)}."
         ),
     )
+
+
+@scorer
+def rag_quality_score(
+    *,
+    outputs: Any | None,
+    expectations: dict[str, Any] | None,
+) -> Feedback:
+
+    if not isinstance(outputs, dict):
+        return Feedback(
+            value=0.0,
+            rationale="Invalid RAG output.",
+        )
+
+    answer = str(outputs.get("answer", "")).strip()
+
+    if not answer:
+        return Feedback(
+            value=0.0,
+            rationale="The RAG system returned an empty answer.",
+        )
+
+    return Feedback(
+        value=1.0,
+        rationale=(
+            "Response is present. Final correctness is evaluated "
+            "separately by the LLM judge."
+        ),
+    )
