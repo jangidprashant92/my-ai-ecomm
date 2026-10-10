@@ -50,9 +50,24 @@ def main() -> None:
     print("=== Starting RAG Evaluation ===")
     print("MMR:---", settings.RAG_USE_MMR)
 
-    with mlflow.start_run(
-        run_name="rag-baseline",
-    ):
+    run_name = "rag-mmr" if settings.RAG_USE_MMR else "rag-similarity-baseline"
+
+    with mlflow.start_run(run_name=run_name):
+        mlflow.log_param(
+            "rag_use_mmr",
+            settings.RAG_USE_MMR,
+        )
+
+        mlflow.log_param(
+            "rag_mmr_fetch_k",
+            settings.RAG_MMR_FETCH_K,
+        )
+
+        mlflow.log_param(
+            "rag_mmr_lambda_mult",
+            settings.RAG_MMR_LAMBDA_MULT,
+        )
+
         results = evaluate(
             data=dataset,
             predict_fn=predict,

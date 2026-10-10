@@ -67,7 +67,6 @@ class RagService:
         self.vector_store = vector_store
         self.model = model
         self.config = config or RagConfig()
-        print(f"RAG config: {self.config}")
         self.query_rewriter = query_rewriter
         self.reranker = LLMDocumentReRanker(
             model=model,
@@ -245,11 +244,9 @@ class RagService:
                 if existing is None or retrieved_document.score > existing.score:
                     retrieved[key] = retrieved_document
 
-        documents = sorted(
-            retrieved.values(),
-            key=lambda document: document.score,
-            reverse=True,
-        )
+        # Preserve the retrieval order after deduplication.
+        # Scores from different queries are not directly comparable.
+        documents = list(retrieved.values())
 
         return documents[: self.config.max_rerank_documents]
 

@@ -6,7 +6,9 @@ from app.ai.rag import (
     QdrantKnowledgeStore,
     RagService,
 )
+from app.ai.rag.config import RagConfig
 from app.ai.rag.query_rewriter import ContextualQueryRewriter
+from app.core.config import settings
 
 
 async def main() -> None:
@@ -24,10 +26,17 @@ async def main() -> None:
         model=model,
     )
 
+    rag_config = RagConfig(
+        mmr_enabled=settings.RAG_USE_MMR,
+        mmr_fetch_k=settings.RAG_MMR_FETCH_K,
+        mmr_lambda_mult=settings.RAG_MMR_LAMBDA_MULT,
+    )
+
     rag_service = RagService(
         vector_store=vector_store,
         model=model,
         query_rewriter=query_rewriter,
+        config=rag_config,
     )
 
     questions = [
