@@ -109,3 +109,28 @@ class QdrantKnowledgeStore:
         # ---------------------------------------------
 
         return filtered
+
+    def mmr_search_with_threshold(
+        self,
+        query: str,
+        k: int = 5,
+        fetch_k: int = 12,
+        lambda_mult: float = 0.75,
+        score_threshold: float = 0.35,
+    ):
+        """Retrieve documents using Maximal Marginal Relevance."""
+
+        if self.vector_store is None:
+            raise RuntimeError(
+                "Qdrant vector store is not initialized. Call connect_existing() first."
+            )
+
+        query_embedding = self.embeddings.embed_query(query)
+
+        return self.vector_store.max_marginal_relevance_search_with_score_by_vector(
+            query_embedding,
+            k=k,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            score_threshold=score_threshold,
+        )

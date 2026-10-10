@@ -5,6 +5,7 @@ from pathlib import Path
 
 import mlflow
 from app.core.config import settings
+from dotenv import load_dotenv
 from evaluation.rag.predictor import predict
 from evaluation.rag.scorers import (
     abstention_quality,
@@ -19,6 +20,9 @@ from mlflow.genai.scorers import (
     RetrievalRelevance,
     RetrievalSufficiency,
 )
+
+load_dotenv()
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DATASET_PATH = BASE_DIR / "dataset.json"
@@ -42,6 +46,9 @@ def main() -> None:
     mlflow.set_experiment(
         "CommerceOps RAG Evaluation",
     )
+
+    print("=== Starting RAG Evaluation ===")
+    print("MMR:---", settings.RAG_USE_MMR)
 
     with mlflow.start_run(
         run_name="rag-baseline",

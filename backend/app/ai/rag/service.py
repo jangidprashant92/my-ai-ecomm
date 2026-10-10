@@ -67,6 +67,7 @@ class RagService:
         self.vector_store = vector_store
         self.model = model
         self.config = config or RagConfig()
+        print(f"RAG config: {self.config}")
         self.query_rewriter = query_rewriter
         self.reranker = LLMDocumentReRanker(
             model=model,
@@ -203,11 +204,20 @@ class RagService:
         retrieved: dict[tuple[str, str], RetrievedDocument] = {}
 
         for query in unique_queries:
-            results = self.vector_store.similarity_search_with_threshold(
-                query=query,
-                k=self.config.candidate_top_k,
-                score_threshold=self.config.score_threshold,
-            )
+            if self.config.mmr_enabled:
+                results = self.vector_store.mmr_search_with_threshold(
+                    query=query,
+                    k=self.config.candidate_top_k,
+                    fetch_k=self.config.mmr_fetch_k,
+                    lambda_mult=self.config.mmr_lambda_mult,
+                    score_threshold=self.config.score_threshold,
+                )
+            else:
+                results = self.vector_store.similarity_search_with_threshold(
+                    query=query,
+                    k=self.config.candidate_top_k,
+                    score_threshold=self.config.score_threshold,
+                )
 
             for document, score in results:
                 source = str(

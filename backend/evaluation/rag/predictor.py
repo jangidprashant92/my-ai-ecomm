@@ -4,15 +4,13 @@ from collections.abc import Sequence
 from typing import Any
 
 import mlflow
-from dotenv import load_dotenv
-
-load_dotenv()
-
 from app.ai.llm.factory import LLMFactory
+from app.ai.rag.config import RagConfig
 from app.ai.rag.embeddings import EmbeddingProvider
 from app.ai.rag.query_rewriter import ContextualQueryRewriter
 from app.ai.rag.service import RagService
 from app.ai.rag.vector_store import QdrantKnowledgeStore
+from app.core.config import settings
 from langchain_core.messages import AIMessage, HumanMessage
 
 
@@ -31,10 +29,17 @@ def build_rag_service() -> RagService:
         model=model,
     )
 
+    rag_config = RagConfig(
+        mmr_enabled=settings.RAG_USE_MMR,
+        mmr_fetch_k=settings.RAG_MMR_FETCH_K,
+        mmr_lambda_mult=settings.RAG_MMR_LAMBDA_MULT,
+    )
+
     return RagService(
         vector_store=vector_store,
         model=model,
         query_rewriter=query_rewriter,
+        config=rag_config,
     )
 
 

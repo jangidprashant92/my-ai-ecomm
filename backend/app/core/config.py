@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     EMBEDDING_ENDPOINT: str
     EVAL_JUDGE_MODEL: str
 
+    RAG_RETRIEVAL_TYPE: str = "mmr"
+
+    RAG_USE_MMR: bool = True
+    RAG_MMR_FETCH_K: int = 12
+    RAG_MMR_LAMBDA_MULT: float = 0.75
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
