@@ -33,7 +33,7 @@ The memory package is currently a prototype rather than an integrated conversati
 - ✅ SSE streaming and message persistence — **backend/app/modules/messages/services.py**
 - ✅ MLflow tracing and HITL-aware tracing
 - 🟡 Production identity/authorization hardening remains: **MessagesService.send_message()** currently uses a hard-coded user UUID. Replace this with authenticated user identity and enforce conversation ownership before production use.
-- 🔴 Security follow-up: the public repository currently tracks a root **.env** file containing non-empty database credential values. Treat them as exposed if they are real or reused: rotate any non-local credentials, stop tracking **.env**, add it to **.gitignore**, and keep only safe placeholders in **.env.sample**. Do not commit real secrets again.
+- 🔴 Security follow-up: the public repository currently tracks a root **.env** file containing non-empty database credential values. Treat them as exposed if they are real or reused: rotate any non-local credentials, and remove the already-tracked **.env** from Git with `git rm --cached .env`. The root **.gitignore** already lists `.env`; ignored files remain tracked until explicitly removed from the index. Keep only safe placeholders in **.env.sample**. Do not commit real secrets again.
 
 ## PHASE 2 — RAG FOUNDATION
 
