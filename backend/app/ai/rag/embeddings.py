@@ -13,6 +13,7 @@ class EmbeddingProvider:
 
         self._embeddings = AzureOpenAIEmbeddings(
             model=settings.EMBEDDING_MODEL,
+            azure_deployment=settings.EMBEDDING_DEPLOYMENT,
             azure_endpoint=settings.EMBEDDING_ENDPOINT,
             api_key=SecretStr(settings.OPENAI_API_KEY),
             dimensions=settings.EMBEDDING_DIMENSIONS,
@@ -22,5 +23,4 @@ class EmbeddingProvider:
     @property
     def embeddings(self):
         """Return the configured embedding model."""
-
         return self._embeddings

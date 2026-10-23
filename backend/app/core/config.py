@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     EMBEDDING_MODEL: str
     EMBEDDING_DIMENSIONS: int
+    EMBEDDING_DEPLOYMENT: str
 
     QDRANT_URL: str
     QDRANT_COLLECTION: str
