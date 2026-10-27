@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import mlflow
 from app.ai.rag.config import RagConfig
+from app.ai.rag.hybrid_retriever import HybridRetriever
 from app.ai.rag.query_rewriter import ContextualQueryRewriter
 from app.ai.rag.reranker import LLMDocumentReRanker
 from app.ai.rag.vector_store import QdrantKnowledgeStore
@@ -63,6 +64,7 @@ class RagService:
         model: BaseChatModel,
         query_rewriter: ContextualQueryRewriter,
         config: RagConfig | None = None,
+        hybrid_retriever: HybridRetriever | None = None,
     ) -> None:
         self.vector_store = vector_store
         self.model = model
@@ -71,6 +73,7 @@ class RagService:
         self.reranker = LLMDocumentReRanker(
             model=model,
         )
+        self.hybrid_retriever = hybrid_retriever
 
     async def answer(
         self,
@@ -202,8 +205,27 @@ class RagService:
 
         retrieved: dict[tuple[str, str], RetrievedDocument] = {}
 
+        retrieval_type = self.config.retrieval_type or (
+            "mmr" if self.config.mmr_enabled else "similarity"
+        )
+
         for query in unique_queries:
-            if self.config.mmr_enabled:
+            if retrieval_type == "hybrid":
+                if self.hybrid_retriever is None:
+                    raise RuntimeError(
+                        "Hybrid retrieval is enabled, but no "
+                        "HybridRetriever was configured."
+                    )
+
+                results = self.hybrid_retriever.retrieve(
+                    query=query,
+                    dense_k=self.config.hybrid_dense_k,
+                    sparse_k=self.config.hybrid_sparse_k,
+                    score_threshold=self.config.score_threshold,
+                    final_k=self.config.max_rerank_documents,
+                )
+
+            elif retrieval_type == "mmr":
                 results = self.vector_store.mmr_search_with_threshold(
                     query=query,
                     k=self.config.candidate_top_k,
@@ -211,12 +233,16 @@ class RagService:
                     lambda_mult=self.config.mmr_lambda_mult,
                     score_threshold=self.config.score_threshold,
                 )
-            else:
+
+            elif retrieval_type == "similarity":
                 results = self.vector_store.similarity_search_with_threshold(
                     query=query,
                     k=self.config.candidate_top_k,
                     score_threshold=self.config.score_threshold,
                 )
+
+            else:
+                raise ValueError(f"Unsupported retrieval type: {retrieval_type!r}")
 
             for document, score in results:
                 source = str(

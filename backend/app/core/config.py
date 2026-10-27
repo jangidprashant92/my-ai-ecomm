@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     RAG_MMR_FETCH_K: int = 12
     RAG_MMR_LAMBDA_MULT: float = 0.75
 
+    KNOWLEDGE_BASE_PATH: str = ""
+    RAG_HYBRID_RRF_K: int = 60
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

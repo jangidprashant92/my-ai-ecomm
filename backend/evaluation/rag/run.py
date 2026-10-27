@@ -47,12 +47,15 @@ def main() -> None:
         "CommerceOps RAG Evaluation",
     )
 
-    print("=== Starting RAG Evaluation ===")
-    print("MMR:---", settings.RAG_USE_MMR)
+    retrieval_type = settings.RAG_RETRIEVAL_TYPE.strip().lower()
 
-    run_name = "rag-mmr" if settings.RAG_USE_MMR else "rag-similarity-baseline"
+    print(f"Retrieval strategy: {retrieval_type}")
+
+    run_name = f"rag-{retrieval_type}"
 
     with mlflow.start_run(run_name=run_name):
+        mlflow.log_param("rag_retrieval_type", retrieval_type)
+        mlflow.log_param("rag_hybrid_rrf_k", settings.RAG_HYBRID_RRF_K)
         mlflow.log_param(
             "rag_use_mmr",
             settings.RAG_USE_MMR,
@@ -67,7 +70,7 @@ def main() -> None:
             "rag_mmr_lambda_mult",
             settings.RAG_MMR_LAMBDA_MULT,
         )
-
+        print("=+==================")
         results = evaluate(
             data=dataset,
             predict_fn=predict,
