@@ -26,6 +26,12 @@ def split_by_category(
 
     categories = df["case_category"].fillna("").astype(str).str.strip().str.lower()
 
+    if categories.eq("").any() or categories.eq("unknown").any():
+        raise ValueError(
+            "Every evaluation row must have a valid case_category. "
+            "Check dataset.json and run.py."
+        )
+
     answerable = df.loc[categories != "negative"].copy()
     negative = df.loc[categories == "negative"].copy()
 
