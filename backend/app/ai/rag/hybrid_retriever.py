@@ -83,7 +83,6 @@ class HybridRetriever:
             score_threshold=score_threshold,
         )
 
-        self.sparse_retriever.k = sparse_k
         sparse_documents = self.sparse_retriever.invoke(query)[:sparse_k]
 
         documents_by_key: dict[tuple[str, str], Document] = {}

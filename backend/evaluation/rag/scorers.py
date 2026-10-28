@@ -72,10 +72,9 @@ def source_recall(
     outputs: Any | None,
     expectations: dict[str, Any] | None,
 ) -> Feedback:
-
     if not isinstance(outputs, dict):
         return Feedback(
-            value=0.0,
+            value="N/A",
             rationale=(
                 "Prediction output is not a dictionary, "
                 "so retrieved sources could not be evaluated."
@@ -84,42 +83,55 @@ def source_recall(
 
     if not isinstance(expectations, dict):
         return Feedback(
-            value=0.0,
+            value="N/A",
             rationale="No evaluation expectations were provided.",
         )
 
-    required_sources = set(
-        expectations.get(
-            "required_sources",
-            [],
-        )
-    )
+    raw_required_sources = expectations.get("required_sources", [])
 
-    actual_sources = {
-        source.get("source")
-        for source in outputs.get(
-            "sources",
-            [],
+    if not isinstance(raw_required_sources, list):
+        return Feedback(
+            value="N/A",
+            rationale="Required sources must be provided as a list.",
         )
-        if isinstance(source, dict) and source.get("source")
+
+    required_sources = {
+        source.strip()
+        for source in raw_required_sources
+        if isinstance(source, str) and source.strip()
     }
 
     if not required_sources:
         return Feedback(
-            value=1.0,
+            value="N/A",
             rationale=(
                 "No required sources were defined for this test case. "
                 "Source recall is not applicable."
             ),
         )
 
-    matched = required_sources.intersection(
-        actual_sources,
-    )
+    raw_sources = outputs.get("sources", [])
+
+    if not isinstance(raw_sources, list):
+        return Feedback(
+            value="N/A",
+            rationale="Retrieved sources must be provided as a list.",
+        )
+
+    actual_sources = {
+        source["source"].strip()
+        for source in raw_sources
+        if (
+            isinstance(source, dict)
+            and isinstance(source.get("source"), str)
+            and source["source"].strip()
+        )
+    }
+
+    matched = required_sources.intersection(actual_sources)
+    missing = required_sources - actual_sources
 
     score = len(matched) / len(required_sources)
-
-    missing = required_sources - actual_sources
 
     return Feedback(
         value=score,
@@ -258,6 +270,7 @@ def source_precision(
     outputs: Any | None,
     expectations: dict[str, Any] | None,
 ) -> Feedback:
+    """Measure how many retrieved source documents are relevant."""
 
     if not isinstance(outputs, dict):
         return Feedback(
@@ -267,61 +280,62 @@ def source_precision(
 
     if not isinstance(expectations, dict):
         return Feedback(
-            value=0.0,
+            value="N/A",
             rationale="No evaluation expectations were provided.",
         )
 
-    required_sources = set(
-        expectations.get(
-            "required_sources",
-            [],
-        )
-    )
+    # Prefer the complete set of relevant sources.
+    # Fall back to required_sources for older dataset entries.
+    source_list = expectations.get("relevant_sources")
 
-    actual_sources = {
-        source.get("source")
-        for source in outputs.get(
-            "sources",
-            [],
-        )
-        if isinstance(source, dict) and source.get("source")
+    if source_list is None:
+        source_list = expectations.get("required_sources", [])
+
+    relevant_sources = {
+        str(source)
+        for source in source_list
+        if isinstance(source, str) and source.strip()
     }
 
-    if not actual_sources:
-        if not required_sources:
-            return Feedback(
-                value=1.0,
-                rationale=(
-                    "No documents were required and no documents were retrieved."
-                ),
-            )
+    actual_sources = {
+        str(source["source"])
+        for source in outputs.get("sources", [])
+        if isinstance(source, dict)
+        and isinstance(source.get("source"), str)
+        and source["source"].strip()
+    }
 
+    # A source precision score is not meaningful without
+    # an annotated set of relevant sources.
+    if not relevant_sources:
         return Feedback(
-            value=0.0,
-            rationale=("Required sources existed, but no documents were retrieved."),
-        )
-
-    if not required_sources:
-        return Feedback(
-            value=0.0,
+            value="N/A",
             rationale=(
-                f"No sources were expected, but {len(actual_sources)} "
-                "documents were retrieved."
+                "No relevant or required sources were defined. "
+                "Source precision is not applicable."
             ),
         )
 
-    matched = required_sources.intersection(
-        actual_sources,
-    )
+    if not actual_sources:
+        return Feedback(
+            value=0.0,
+            rationale=(
+                "Relevant sources were defined, but no documents were retrieved."
+            ),
+        )
+
+    matched = relevant_sources.intersection(actual_sources)
+    extra_sources = actual_sources - relevant_sources
 
     precision = len(matched) / len(actual_sources)
-
-    extra_sources = actual_sources - required_sources
 
     return Feedback(
         value=precision,
         rationale=(
-            f"Matched sources: {sorted(matched)}. "
-            f"Extra sources: {sorted(extra_sources)}."
+            f"Matched relevant sources: {sorted(matched)}. "
+            f"Retrieved sources not annotated as relevant: "
+            f"{sorted(extra_sources)}. "
+            f"Relevant sources not retrieved: "
+            f"{sorted(relevant_sources - actual_sources)}."
         ),
     )
