@@ -1,0 +1,51 @@
+{
+  "summaries": {
+    "baseline": {
+      "n_answerable": 10,
+      "n_negative": 2,
+      "source_recall": 1.0,
+      "source_precision": 1.0,
+      "correctness": 1.0,
+      "groundedness": 1.0,
+      "sufficiency": 1.0,
+      "rag_quality": 1.0,
+      "relevance_precision": 0.9,
+      "abstention": 1.0,
+      "latency_p50_ms": 4224.517333001131,
+      "latency_p95_ms": 4878.4103956466415
+    },
+    "mmr": {
+      "n_answerable": 10,
+      "n_negative": 2,
+      "source_recall": 1.0,
+      "source_precision": 1.0,
+      "correctness": 1.0,
+      "groundedness": 1.0,
+      "sufficiency": 1.0,
+      "rag_quality": 1.0,
+      "relevance_precision": 0.9,
+      "abstention": 1.0,
+      "latency_p50_ms": 3808.1338125048205,
+      "latency_p95_ms": 4713.771466995239
+    },
+    "hybrid": {
+      "n_answerable": 10,
+      "n_negative": 2,
+      "source_recall": 1.0,
+      "source_precision": 1.0,
+      "correctness": 1.0,
+      "groundedness": 1.0,
+      "sufficiency": 1.0,
+      "rag_quality": 1.0,
+      "relevance_precision": 0.9,
+      "abstention": 1.0,
+      "latency_p50_ms": 4326.017145998776,
+      "latency_p95_ms": 4877.352574696124
+    }
+  },
+  "failures": {
+    "mmr": [],
+    "hybrid": []
+  },
+  "winner": "mmr"
+}
