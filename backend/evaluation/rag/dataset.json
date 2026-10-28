@@ -12,7 +12,8 @@
         "The customer must provide evidence of the damage.",
         "Refunds above BRL 500 require manual approval."
       ],
-      "required_sources": ["policies/refund_policy.md"]
+      "required_sources": ["policies/refund_policy.md"],
+      "relevant_sources": ["policies/refund_policy.md"]
     }
   },
   {
@@ -57,32 +58,19 @@
     "id": "rag-004",
     "category": "cross_policy",
     "inputs": {
-      "question": "Does the 7-day rule also apply to standard returns?",
-      "history": [
-        {
-          "role": "user",
-          "content": "What is the refund policy for a damaged product?"
-        },
-        {
-          "role": "assistant",
-          "content": "Damaged-product refunds can be requested within 7 calendar days."
-        },
-        {
-          "role": "user",
-          "content": "What about standard returns?"
-        },
-        {
-          "role": "assistant",
-          "content": "Standard returns can be requested within 30 calendar days."
-        }
-      ]
+      "question": "Compare the deadline for damaged-product refunds with the deadline for eligible standard returns.",
+      "history": []
     },
     "expectations": {
       "expected_facts": [
-        "The 7-day period applies to damaged-product refunds.",
+        "Damaged-product refunds can be requested within 7 calendar days of delivery.",
         "Eligible standard returns can be requested within 30 calendar days of delivery."
       ],
       "required_sources": [
+        "policies/refund_policy.md",
+        "policies/return_policy.md"
+      ],
+      "relevant_sources": [
         "policies/refund_policy.md",
         "policies/return_policy.md"
       ]

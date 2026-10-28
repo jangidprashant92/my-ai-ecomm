@@ -291,6 +291,20 @@ def source_precision(
     if source_list is None:
         source_list = expectations.get("required_sources", [])
 
+    if not isinstance(source_list, list):
+        return Feedback(
+            value="N/A",
+            rationale="Relevant sources must be provided as a list.",
+        )
+
+    raw_sources = outputs.get("sources", [])
+
+    if not isinstance(raw_sources, list):
+        return Feedback(
+            value="N/A",
+            rationale="Retrieved sources must be provided as a list.",
+        )
+
     relevant_sources = {
         str(source)
         for source in source_list
