@@ -120,10 +120,33 @@ def main() -> None:
 
         print(results.result_df[available_columns].to_string(index=False))  # type: ignore
 
-        results.result_df.to_csv(
-            BASE_DIR / "results.csv",
-            index=False,
+        result_df = results.result_df.copy()
+
+        if len(result_df) != len(dataset):
+            raise RuntimeError(
+                f"Evaluation returned {len(result_df)} rows for "
+                f"{len(dataset)} dataset cases. Cannot safely attach case metadata."
+            )
+
+        # Avoid duplicate columns if the evaluation output already contains them.
+        result_df = result_df.drop(
+            columns=["case_id", "case_category"],
+            errors="ignore",
         )
+
+        result_df.insert(
+            0,
+            "case_id",
+            [case.get("id", f"case-{i + 1}") for i, case in enumerate(dataset)],
+        )
+
+        result_df.insert(
+            1,
+            "case_category",
+            [case.get("category", "unknown") for case in dataset],
+        )
+
+        result_df.to_csv(BASE_DIR / "results.csv", index=False)
 
 
 if __name__ == "__main__":
