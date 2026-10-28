@@ -196,7 +196,11 @@
         "Refunds above BRL 500 require human approval.",
         "Support should record the support interaction."
       ],
-      "required_sources": ["support/damaged_product_sop.md"]
+      "required_sources": ["support/damaged_product_sop.md"],
+      "relevant_sources": [
+        "support/damaged_product_sop.md",
+        "policies/refund_policy.md"
+      ]
     }
   },
   {
