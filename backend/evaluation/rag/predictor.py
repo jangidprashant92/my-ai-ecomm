@@ -15,6 +15,7 @@ from app.ai.rag.query_rewriter import ContextualQueryRewriter
 from app.ai.rag.service import RagService
 from app.ai.rag.vector_store import QdrantKnowledgeStore
 from app.core.config import settings
+from evaluation.rag.retrieval_metrics import calculate_retrieval_metrics
 from langchain_core.messages import AIMessage, HumanMessage
 
 
@@ -129,8 +130,19 @@ def predict(
         for document in documents
     ]
 
+    retrieval_metrics = calculate_retrieval_metrics(
+        documents=[
+            {
+                "source": document.metadata.get("source"),
+                "content": document.content,
+            }
+            for document in documents
+        ]
+    )
+
     return {
         "answer": answer,
         "sources": sources,
         "context": context,
+        "retrieval_metrics": retrieval_metrics,
     }

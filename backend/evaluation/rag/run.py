@@ -12,7 +12,9 @@ from dotenv import load_dotenv
 from evaluation.rag.predictor import predict
 from evaluation.rag.scorers import (
     abstention_quality,
+    duplicate_chunk_ratio_score,
     rag_quality_judge,
+    source_diversity_score,
     source_precision,
     source_recall,
 )
@@ -70,12 +72,22 @@ def main(output_path: Path = DEFAULT_OUTPUT, label: str | None = None) -> None:
             scorers=[
                 source_recall,
                 source_precision,
+                source_diversity_score,
+                duplicate_chunk_ratio_score,
                 abstention_quality,
                 rag_quality_judge,
-                RetrievalRelevance(model=settings.EVAL_JUDGE_MODEL),
-                RetrievalGroundedness(model=settings.EVAL_JUDGE_MODEL),
-                RetrievalSufficiency(model=settings.EVAL_JUDGE_MODEL),
-                Correctness(model=settings.EVAL_JUDGE_MODEL),
+                RetrievalRelevance(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
+                RetrievalGroundedness(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
+                RetrievalSufficiency(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
+                Correctness(
+                    model=settings.EVAL_JUDGE_MODEL,
+                ),
             ],
         )
 

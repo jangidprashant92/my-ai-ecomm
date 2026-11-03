@@ -23,7 +23,6 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = BASE_DIR.parents[1]
 OUT_DIR = BASE_DIR / "benchmarks"
-MIN_LATENCY_IMPROVEMENT = 0.20
 
 # ASSUMPTION: verify these values against what your retriever factory accepts
 # (see app/ai/rag/vector_store.py / service.py). "baseline" must reproduce the
@@ -40,11 +39,13 @@ NEGATIVE_CATEGORIES = {"negative", "unanswerable"}
 ANSWERABLE_METRICS = {
     "source_recall": "source_recall/value",
     "source_precision": "source_precision/value",
+    "source_diversity": "source_diversity_score/value",
+    "duplicate_chunk_ratio": ("duplicate_chunk_ratio_score/value"),
     "correctness": "correctness/value",
     "groundedness": "retrieval_groundedness/value",
     "sufficiency": "retrieval_sufficiency/value",
     "rag_quality": "commerceops_rag_quality/value",
-    "relevance_precision": "retrieval_relevance/precision/value",
+    "relevance_precision": ("retrieval_relevance/precision/value"),
 }
 NEGATIVE_METRICS = {"abstention": "abstention_quality/value"}
 
@@ -52,6 +53,8 @@ NEGATIVE_METRICS = {"abstention": "abstention_quality/value"}
 MIN_ABSTENTION = 1.0
 MIN_ABSOLUTE_QUALITY = 0.9  # correctness, groundedness, sufficiency
 MAX_P95_LATENCY_RATIO = 1.5  # vs baseline
+MIN_LATENCY_IMPROVEMENT = 0.20
+
 NO_REGRESSION_METRICS = [
     "source_recall",
     "correctness",

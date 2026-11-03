@@ -353,3 +353,74 @@ def source_precision(
             f"{sorted(relevant_sources - actual_sources)}."
         ),
     )
+
+
+@scorer
+def source_diversity_score(
+    *,
+    outputs: Any | None,
+) -> Feedback:
+    if not isinstance(outputs, dict):
+        return Feedback(
+            value=0.0,
+            rationale="Invalid prediction output.",
+        )
+
+    metrics = outputs.get("retrieval_metrics")
+
+    if not isinstance(metrics, dict):
+        return Feedback(
+            value="N/A",
+            rationale="Retrieval metrics were not provided.",
+        )
+
+    score = metrics.get("source_diversity")
+
+    if score is None:
+        return Feedback(
+            value="N/A",
+            rationale="Source diversity is unavailable.",
+        )
+
+    return Feedback(
+        value=float(score),
+        rationale=(
+            f"Unique source count: "
+            f"{metrics.get('unique_source_count', 0)}. "
+            f"Retrieved count: "
+            f"{metrics.get('retrieved_count', 0)}."
+        ),
+    )
+
+
+@scorer
+def duplicate_chunk_ratio_score(
+    *,
+    outputs: Any | None,
+) -> Feedback:
+    if not isinstance(outputs, dict):
+        return Feedback(
+            value=0.0,
+            rationale="Invalid prediction output.",
+        )
+
+    metrics = outputs.get("retrieval_metrics")
+
+    if not isinstance(metrics, dict):
+        return Feedback(
+            value="N/A",
+            rationale="Retrieval metrics were not provided.",
+        )
+
+    score = metrics.get("duplicate_chunk_ratio")
+
+    if score is None:
+        return Feedback(
+            value="N/A",
+            rationale="Duplicate chunk ratio is unavailable.",
+        )
+
+    return Feedback(
+        value=float(score),
+        rationale=(f"Duplicate chunk ratio: {float(score):.4f}"),
+    )
