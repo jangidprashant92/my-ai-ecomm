@@ -23,6 +23,7 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = BASE_DIR.parents[1]
 OUT_DIR = BASE_DIR / "benchmarks"
+MIN_LATENCY_IMPROVEMENT = 0.20
 
 # ASSUMPTION: verify these values against what your retriever factory accepts
 # (see app/ai/rag/vector_store.py / service.py). "baseline" must reproduce the
@@ -137,18 +138,26 @@ def evaluate_gates(baseline: dict, candidate: dict) -> list[str]:
 
 
 def select_winner(summaries: dict[str, dict], failures: dict[str, list[str]]) -> str:
-    """Baseline wins ties. A candidate must pass every gate AND strictly improve the ranking key."""
+    """Baseline wins unless a gate-passing candidate is clearly better.
 
-    def key(s: dict) -> tuple[float, float]:
-        precision = round(s.get("source_precision") or 0.0, 3)
-        latency_bucket = round((s.get("latency_p50_ms") or 0.0) / 100)
-        return (precision, -latency_bucket)
-
+    "Clearly better" means higher source precision, or >=20% lower p50 latency
+    without any drop in source precision.
+    """
     best = "baseline"
     for name, summary in summaries.items():
         if name == "baseline" or failures.get(name):
             continue
-        if key(summary) > key(summaries[best]):
+        ref = summaries[best]
+        cand_p = summary.get("source_precision") or 0.0
+        ref_p = ref.get("source_precision") or 0.0
+        if cand_p < ref_p - 1e-9:
+            continue
+        better_precision = cand_p > ref_p + 1e-9
+        ref_lat, cand_lat = ref.get("latency_p50_ms"), summary.get("latency_p50_ms")
+        better_latency = bool(
+            ref_lat and cand_lat and cand_lat <= ref_lat * (1 - MIN_LATENCY_IMPROVEMENT)
+        )
+        if better_precision or better_latency:
             best = name
     return best
 

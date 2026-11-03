@@ -10,8 +10,8 @@
 | rag_quality | 1.000 | 1.000 | 1.000 |
 | relevance_precision | 0.900 | 0.900 | 0.900 |
 | abstention | 1.000 | 1.000 | 1.000 |
-| latency_p50_ms | 4225 | 3808 | 4326 |
-| latency_p95_ms | 4878 | 4714 | 4877 |
+| latency_p50_ms | 4225 | 4089 | 4554 |
+| latency_p95_ms | 4878 | 4788 | 4815 |
 
 ## Gate results
 
@@ -19,6 +19,6 @@
 - **mmr**: PASS
 - **hybrid**: PASS
 
-## Selected strategy: `mmr`
+## Selected strategy: `baseline`
 
 Note: the dataset has few cases, so small differences are noise. Ties go to the baseline.

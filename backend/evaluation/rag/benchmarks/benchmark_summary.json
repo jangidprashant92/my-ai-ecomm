@@ -25,8 +25,8 @@
       "rag_quality": 1.0,
       "relevance_precision": 0.9,
       "abstention": 1.0,
-      "latency_p50_ms": 3808.1338125048205,
-      "latency_p95_ms": 4713.771466995239
+      "latency_p50_ms": 4089.0374790033093,
+      "latency_p95_ms": 4788.288395804557
     },
     "hybrid": {
       "n_answerable": 10,
@@ -39,13 +39,13 @@
       "rag_quality": 1.0,
       "relevance_precision": 0.9,
       "abstention": 1.0,
-      "latency_p50_ms": 4326.017145998776,
-      "latency_p95_ms": 4877.352574696124
+      "latency_p50_ms": 4553.526020499703,
+      "latency_p95_ms": 4814.839679104625
     }
   },
   "failures": {
     "mmr": [],
     "hybrid": []
   },
-  "winner": "mmr"
+  "winner": "baseline"
 }
